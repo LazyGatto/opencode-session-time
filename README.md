@@ -1,5 +1,8 @@
 # opencode-session-time
 
+[![npm version](https://img.shields.io/npm/v/opencode-session-time)](https://www.npmjs.com/package/opencode-session-time)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Timestamps for your [OpenCode](https://opencode.ai) V2 sessions: wall clock in the prompt footer,
 `Session` block in the sidebar (started / last answer), and a `/time` timeline panel.
 
@@ -33,7 +36,11 @@ is the closest native place.
 }
 ```
 
-`npm i -g opencode-session-time` works too if you prefer an explicit install.
+Or install it explicitly:
+
+```bash
+npm i -g opencode-session-time
+```
 
 Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
 dependencies provided by the host.
