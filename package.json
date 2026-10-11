@@ -1,0 +1,23 @@
+{
+  "name": "opencode-session-time",
+  "version": "0.1.0",
+  "description": "OpenCode V2 CLI plugin: wall-clock time in the prompt footer, session start / last answer timestamps in the sidebar, and a /time timeline panel.",
+  "type": "module",
+  "exports": {
+    "./tui": "./src/tui.tsx"
+  },
+  "keywords": ["opencode", "opencode-plugin", "tui", "timestamp", "session"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LazyGatto/opencode-session-time.git"
+  },
+  "dependencies": {
+    "@opencode/plugin": "latest"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.5.8",
+    "@opentui/solid": ">=0.5.8",
+    "solid-js": ">=1.9.0"
+  }
+}
