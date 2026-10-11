@@ -26,8 +26,6 @@ is the closest native place.
 
 ## Install
 
-Once published to npm:
-
 ```jsonc
 // ~/.config/opencode/cli.json
 {
@@ -35,19 +33,7 @@ Once published to npm:
 }
 ```
 
-From this repository (before npm publication):
-
-```bash
-git clone https://github.com/LazyGatto/opencode-session-time.git
-```
-
-then point `cli.json` at the checkout:
-
-```jsonc
-{
-  "plugins": ["/path/to/opencode-session-time/src/tui.tsx"]
-}
-```
+`npm i -g opencode-session-time` works too if you prefer an explicit install.
 
 Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
 dependencies provided by the host.
