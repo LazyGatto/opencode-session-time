@@ -21,7 +21,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LazyGatto/opencode-session-time.git"
+    "url": "git+https://github.com/LazyGatto/opencode-session-time.git"
   },
   "dependencies": {
     "@opencode/plugin": "latest"
