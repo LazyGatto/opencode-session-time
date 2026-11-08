@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, For, onMount, Show } from "solid-js"
-import { TextAttributes } from "@opentui/core"
+import { TextAttributes, t, fg, bold } from "@opentui/core"
 
 // opencode-session-time: timestamps for your OpenCode sessions.
 //
@@ -585,17 +585,17 @@ export default Plugin.define({
                   context.ui.dialog.set({ size: "large", centered: true })
                   context.ui.dialog.show(() => (
                     <box flexDirection="column">
-                      <text fg={context.theme.text.base} attributes={TextAttributes.BOLD}>Turn details</text>
-                      {line("started", fmt(message.time?.created))}
-                      {line("completed", message.time?.completed ? fmt(message.time.completed) : "in progress")}
-                      {line("duration", duration ?? "—")}
-                      {line("agent", message.agent ?? "—")}
-                      {line("model", `${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}
-                      {line("tokens", `in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}
-                      {line("cost", cost ? `$${cost.toFixed(4)}` : "$0")}
-                      {line("finish", String(finish))}
-                      <text fg={context.theme.text.muted}>{preview(message) || "no text reply"}</text>
-                      <text fg={context.theme.text.muted}>Esc — close</text>
+                      <text>{t`${bold("Turn details")}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("started:")}${fg(context.theme.text.base)(`   ${fmt(message.time?.created)}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("completed:")}${fg(context.theme.text.base)(` ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("duration:")}${fg(context.theme.text.base)(`  ${duration ?? "—"}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("agent:")}${fg(context.theme.text.base)(`     ${message.agent ?? "—"}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("model:")}${fg(context.theme.text.base)(`     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("tokens:")}${fg(context.theme.text.base)(`    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("cost:")}${fg(context.theme.text.base)(`      ${cost ? `$${cost.toFixed(4)}` : "$0"}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("finish:")}${fg(context.theme.text.base)(`    ${String(finish)}`)}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
+                      <text>{t`${fg(context.theme.text.muted)("Esc — close")}`}</text>
                     </box>
                   ))
                 }
