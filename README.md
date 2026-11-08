@@ -1,5 +1,6 @@
 # opencode-session-time
 
+[![npm version](https://img.shields.io/npm/v/opencode-session-time)](https://www.npmjs.com/package/opencode-session-time)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Timestamps for your [OpenCode](https://opencode.ai) V2 sessions: a current-turn
@@ -56,19 +57,26 @@ is the closest native place.
 
 ## Install
 
-This fork is TUI-only. Install the pinned release tag from GitHub:
+TUI-only plugin. Install it from npm:
 
 ```bash
-opencode plugin add github:ransagy/opencode-session-time#v0.2.1
+opencode plugin add opencode-session-time
 ```
 
-`opencode plugin add` writes the plugin to your global CLI configuration and installs
-it from GitHub. Restart the TUI after installing.
+`opencode plugin add` writes the plugin to your global CLI configuration and installs it.
+Restart the TUI after installing. Alternatively, list the package in
+`~/.config/opencode/cli.json`:
 
-To track the development branch instead:
+```jsonc
+{
+  "plugins": ["opencode-session-time"]
+}
+```
+
+To pin a release tag or track the development branch directly from GitHub:
 
 ```bash
-opencode plugin add github:ransagy/opencode-session-time#feat/session-timings
+opencode plugin add github:LazyGatto/opencode-session-time#v0.2.1
 ```
 
 Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
