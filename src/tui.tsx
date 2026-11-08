@@ -601,6 +601,7 @@ export default Plugin.define({
                         <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
                       </box>
                     ),
+                  )
                 })
               }
             },
