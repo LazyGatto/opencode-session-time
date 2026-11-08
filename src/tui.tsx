@@ -579,8 +579,16 @@ export default Plugin.define({
                   context.ui.dialog.set({ size: "xlarge", centered: true })
                   context.ui.dialog.show(
                     () => (
-                      <box flexDirection="column" padding={1}>
-                        <text>{t`${bold("Turn details")}`}</text>
+                      <box
+                        flexDirection="column"
+                        border
+                        title="Turn details"
+                        titleColor={context.theme.text.base}
+                        titleAlignment="left"
+                        bottomTitle="Esc — back to the timeline"
+                        bottomTitleAlignment="left"
+                        padding={1}
+                      >
                         <text>{t`${fg(context.theme.text.muted)("started:")}${fg(context.theme.text.base)(`   ${fmt(message.time?.created)}`)}`}</text>
                         <text>{t`${fg(context.theme.text.muted)("completed:")}${fg(context.theme.text.base)(` ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`)}`}</text>
                         <text>{t`${fg(context.theme.text.muted)("duration:")}${fg(context.theme.text.base)(`  ${duration ?? "—"}`)}`}</text>
@@ -589,12 +597,10 @@ export default Plugin.define({
                         <text>{t`${fg(context.theme.text.muted)("tokens:")}${fg(context.theme.text.base)(`    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}`}</text>
                         <text>{t`${fg(context.theme.text.muted)("cost:")}${fg(context.theme.text.base)(`      ${cost ? `$${cost.toFixed(4)}` : "$0"}`)}`}</text>
                         <text>{t`${fg(context.theme.text.muted)("finish:")}${fg(context.theme.text.base)(`    ${String(finish)}`)}`}</text>
+                        <text> </text>
                         <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("Esc — back to the timeline")}`}</text>
                       </box>
                     ),
-                    () => resolve(),
-                  )
                 })
               }
             },
