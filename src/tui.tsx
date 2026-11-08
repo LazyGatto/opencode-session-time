@@ -66,6 +66,18 @@ const line = (ms: number | undefined, label: string, duration?: string) => {
   return `${fmt(ms)} ${label}${duration ? ` · ${duration}` : ""} · ${ago(ms)}`
 }
 
+const preview = (message: any): string => {
+  const content = message.content
+  let text = ""
+  if (typeof content === "string") text = content
+  else if (Array.isArray(content))
+    text = content
+      .map((part: any) => (typeof part === "string" ? part : part?.type === "text" ? (part.text ?? "") : ""))
+      .join(" ")
+  text = text.replace(/\s+/g, " ").trim()
+  return text.length > 110 ? `${text.slice(0, 110)}…` : text
+}
+
 const messages = (context: any, sessionID: string): any[] =>
   (context.data.session.message.list(sessionID) ?? []) as any[]
 
@@ -532,11 +544,10 @@ export default Plugin.define({
                   return {
                     title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
                       message.model?.id ?? message.model ?? "—"
-                    }`,
+                    }${duration ? ` · ${duration}` : ""}`,
                     value: message.id,
-                    description: message.time?.completed
-                      ? `→ ${fmt(message.time.completed)}${duration ? ` · ${duration}` : ""}`
-                      : "→ in progress",
+                    // D: preview of the text reply
+                    description: preview(message) || "no text reply",
                   }
                 }),
                 search: (query, options) =>
@@ -555,7 +566,28 @@ export default Plugin.define({
               })
               // widen the popup (palette-style): presentation of the active dialog
               context.ui.dialog.set({ size: "xlarge", centered: true })
-              await selection
+              const picked = await selection
+              if (picked) {
+                // A: quick stats of the picked turn
+                const message: any = rows.find((m: any) => m.id === picked)
+                if (message) {
+                  const duration = dur(message.time?.created, message.time?.completed)
+                  const tok = message.tokens ?? {}
+                  const output = typeof tok.output === "number" ? tok.output : 0
+                  const reasoning = typeof tok.reasoning === "number" ? tok.reasoning : 0
+                  const cost = typeof message.cost === "number" ? message.cost : 0
+                  const finish = message.finish ?? message.rawFinish ?? "—"
+                  context.ui.toast.show({
+                    title: `${fmt(message.time?.created)} · ${message.agent ?? "—"}`,
+                    message: `${fmt(message.time?.created)} → ${
+                      message.time?.completed ? fmt(message.time.completed) : "in progress"
+                    }${duration ? ` · ${duration}` : ""} · ${output} tok${
+                      reasoning ? ` (+${reasoning} reasoning)` : ""
+                    }${cost ? ` · $${cost.toFixed(4)}` : ""} · ${finish}`,
+                    duration: 5000,
+                  })
+                }
+              }
             },
           },
         ],
