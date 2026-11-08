@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 — 2026-11-08
+
+- `/time` is now a palette-style popup (host `dialog.select`): searchable timeline,
+  `ctrl+n`/`ctrl+p` navigation, `ctrl+a` to close, Esc closes — same UX as the
+  command palette. Replaces the session panel.
+
 ## 0.2.2 — 2026-11-08
 
 - `/time` is now a toggle: a repeated command closes the panel

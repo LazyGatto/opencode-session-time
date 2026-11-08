@@ -7,7 +7,7 @@ import { TextAttributes } from "@opentui/core"
 //
 //  - prompt.footer.status — elapsed time for the current turn near the prompt;
 //  - sidebar.content      — a "Session Timings" block (started / input / thought / reply);
-//  - session.panel        — a /time command with the per-turn timeline.
+//  - /time                  — palette-style timeline popup (dialog.select).
 //
 // Note: the OpenCode plugin API has no slot for the per-message footer, so
 // inline timestamps under each message are not possible yet (upstream feature
@@ -493,41 +493,6 @@ export default Plugin.define({
       )
     }
 
-    // 3) /time — per-turn timeline panel.
-    const Timeline = () => {
-      const rows = createMemo(() => {
-        tick()
-        const route = context.ui.router.current()
-        const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
-        return sessionID
-          ? messages(context, sessionID).filter((message) => message.type === "assistant")
-          : []
-      })
-
-      return (
-        <box flexDirection="column">
-          <text fg={context.theme.text.base} attributes={TextAttributes.BOLD}>Timeline</text>
-          <For each={rows()}>
-            {(message: any) => {
-              const duration = dur(message.time?.created, message.time?.completed)
-              return (
-                <text fg={context.theme.text.muted}>
-                  {fmt(message.time?.created)} · {message.agent ?? "—"} ·{" "}
-                  {message.model?.id ?? message.model ?? "—"} →{" "}
-                  {message.time?.completed
-                    ? `${fmt(message.time.completed)}${duration ? ` · ${duration}` : ""}`
-                    : "in progress"}
-                </text>
-              )
-            }}
-          </For>
-          <Show when={rows().length === 0}>
-            <text fg={context.theme.text.muted}>No assistant turns yet</text>
-          </Show>
-        </box>
-      )
-    }
-
     const disposeClock = context.ui.slot({
       append: "prompt.footer.status",
       render: () => <PromptClock />,
@@ -536,15 +501,6 @@ export default Plugin.define({
     const disposeSide = context.ui.slot({
       append: "sidebar.content",
       render: ({ sessionID }) => <SessionTimings sessionID={sessionID} />,
-    })
-
-    const disposePanel = context.ui.slot({
-      append: "session.panel",
-      render: (panel) => (
-        <Show when={panel.name === "session-time.timeline"}>
-          <Timeline />
-        </Show>
-      ),
     })
 
     // Keymap provider exists only in a full TUI; CLI reconciliation must not fail.
@@ -557,11 +513,46 @@ export default Plugin.define({
             id: "session-time.timeline",
             title: "Time: session timeline",
             slash: { name: "time" },
-            run: () => {
-              // toggle: repeated /time closes the panel
-              const active = context.ui.panel.current()
-              if (active?.name === "session-time.timeline") context.ui.panel.close()
-              else context.ui.panel.open("session-time.timeline")
+            run: async () => {
+              // palette-style popup: searchable, navigable, Esc closes
+              const route = context.ui.router.current()
+              const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
+              if (sessionID) await context.data.session.message.sync(sessionID)
+              const rows = (sessionID ? messages(context, sessionID) : []).filter(
+                (message: any) => message.type === "assistant",
+              )
+              if (rows.length === 0) {
+                context.ui.toast.show({ message: "No assistant turns yet" })
+                return
+              }
+              await context.ui.dialog.select({
+                title: `Session timeline · ${rows.length} turns`,
+                options: rows.map((message: any) => {
+                  const duration = dur(message.time?.created, message.time?.completed)
+                  return {
+                    title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
+                      message.model?.id ?? message.model ?? "—"
+                    }`,
+                    value: message.id,
+                    description: message.time?.completed
+                      ? `→ ${fmt(message.time.completed)}${duration ? ` · ${duration}` : ""}`
+                      : "→ in progress",
+                  }
+                }),
+                search: (query, options) =>
+                  options.filter((option) =>
+                    `${option.title} ${option.description ?? ""}`.toLowerCase().includes(query.toLowerCase()),
+                  ),
+                actions: [
+                  {
+                    bind: "ctrl+a",
+                    title: "Close",
+                    side: "right",
+                    selection: "none",
+                    onTrigger: () => context.ui.dialog.clear(),
+                  },
+                ],
+              })
             },
           },
         ],
@@ -575,7 +566,6 @@ export default Plugin.define({
       unlisten()
       disposeClock?.()
       disposeSide?.()
-      disposePanel?.()
       disposeKeys?.()
     }
   },
