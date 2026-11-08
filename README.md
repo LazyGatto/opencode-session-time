@@ -6,10 +6,9 @@ Timestamps for your [OpenCode](https://opencode.ai) V2 sessions: a current-turn
 stopwatch in the prompt footer, a `Session Timings` block in the sidebar, and a
 `/time` timeline panel.
 
-> This is a fork of
-> [LazyGatto/opencode-session-time](https://github.com/LazyGatto/opencode-session-time)
-> that adds last user input, last model thought, and last model reply timings, plus
-> relative ages.
+> **v0.2.0–v0.2.1 contributed by [@ransagy](https://github.com/ransagy)** — last user
+> input, last model thought and last model reply timings, relative ages, turn stopwatch,
+> API backfill, durable persistence and throttled live refresh.
 
 Small TUI plugin built on the official [`@opencode/plugin/tui`](https://opencode.ai/v2/docs/build/plugins/cli/) API.
 
