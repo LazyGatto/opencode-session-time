@@ -2,12 +2,13 @@
 
 ## 0.3.0 — 2026-11-08
 
-- `/time` is now a palette-style popup (host `dialog.select`): searchable timeline,
-  `ctrl+n`/`ctrl+p` navigation, `ctrl+a` to close, Esc closes — same UX as the
-  command palette. Replaces the session panel.
-- Timeline popup uses `xlarge` + `centered` dialog presentation; newest turns are listed first.
-- Each timeline row previews the text reply; picking a turn (Enter) opens a details
-  popup (started/completed/duration, agent, model, tokens, cost, finish, reply preview).
+- `/time` is now a palette-style popup (`dialog.select`): searchable timeline with the
+  newest turns first, `ctrl+n`/`ctrl+p` navigation, `ctrl+a` to close. Replaces the
+  session panel.
+- Each timeline row previews the text reply. **Enter** opens a per-turn details card
+  (timing, agent, model, tokens, cost, finish reason, reply preview); **Esc** returns
+  to the timeline, **Esc** again closes it.
+- `xlarge` + `centered` dialog presentation for both popups.
 
 ## 0.2.2 — 2026-11-08
 
