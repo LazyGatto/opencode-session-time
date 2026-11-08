@@ -568,24 +568,36 @@ export default Plugin.define({
               context.ui.dialog.set({ size: "xlarge", centered: true })
               const picked = await selection
               if (picked) {
-                // A: quick stats of the picked turn
+                // A: details popup for the picked turn
                 const message: any = rows.find((m: any) => m.id === picked)
                 if (message) {
                   const duration = dur(message.time?.created, message.time?.completed)
                   const tok = message.tokens ?? {}
-                  const output = typeof tok.output === "number" ? tok.output : 0
-                  const reasoning = typeof tok.reasoning === "number" ? tok.reasoning : 0
+                  const cache = tok.cache ?? {}
                   const cost = typeof message.cost === "number" ? message.cost : 0
                   const finish = message.finish ?? message.rawFinish ?? "—"
-                  context.ui.toast.show({
-                    title: `${fmt(message.time?.created)} · ${message.agent ?? "—"}`,
-                    message: `${fmt(message.time?.created)} → ${
-                      message.time?.completed ? fmt(message.time.completed) : "in progress"
-                    }${duration ? ` · ${duration}` : ""} · ${output} tok${
-                      reasoning ? ` (+${reasoning} reasoning)` : ""
-                    }${cost ? ` · $${cost.toFixed(4)}` : ""} · ${finish}`,
-                    duration: 5000,
-                  })
+                  const line = (label: string, value: string) => (
+                    <text>
+                      <text fg={context.theme.text.muted}>{label}: </text>
+                      <text fg={context.theme.text.base}>{value}</text>
+                    </text>
+                  )
+                  context.ui.dialog.set({ size: "large", centered: true })
+                  context.ui.dialog.show(() => (
+                    <box flexDirection="column">
+                      <text fg={context.theme.text.base} attributes={TextAttributes.BOLD}>Turn details</text>
+                      {line("started", fmt(message.time?.created))}
+                      {line("completed", message.time?.completed ? fmt(message.time.completed) : "in progress")}
+                      {line("duration", duration ?? "—")}
+                      {line("agent", message.agent ?? "—")}
+                      {line("model", `${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}
+                      {line("tokens", `in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}
+                      {line("cost", cost ? `$${cost.toFixed(4)}` : "$0")}
+                      {line("finish", String(finish))}
+                      <text fg={context.theme.text.muted}>{preview(message) || "no text reply"}</text>
+                      <text fg={context.theme.text.muted}>Esc — close</text>
+                    </box>
+                  ))
                 }
               }
             },

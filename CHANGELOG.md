@@ -6,8 +6,8 @@
   `ctrl+n`/`ctrl+p` navigation, `ctrl+a` to close, Esc closes — same UX as the
   command palette. Replaces the session panel.
 - Timeline popup uses `xlarge` + `centered` dialog presentation.
-- Each timeline row previews the text reply; picking a turn (Enter) shows a toast with
-  duration, tokens, cost and finish reason.
+- Each timeline row previews the text reply; picking a turn (Enter) opens a details
+  popup (started/completed/duration, agent, model, tokens, cost, finish, reply preview).
 
 ## 0.2.2 — 2026-11-08
 
