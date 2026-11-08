@@ -5,7 +5,7 @@
 - `/time` is now a palette-style popup (host `dialog.select`): searchable timeline,
   `ctrl+n`/`ctrl+p` navigation, `ctrl+a` to close, Esc closes — same UX as the
   command palette. Replaces the session panel.
-- Timeline popup uses `xlarge` + `centered` dialog presentation.
+- Timeline popup uses `xlarge` + `centered` dialog presentation; newest turns are listed first.
 - Each timeline row previews the text reply; picking a turn (Enter) opens a details
   popup (started/completed/duration, agent, model, tokens, cost, finish, reply preview).
 

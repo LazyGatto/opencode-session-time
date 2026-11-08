@@ -541,7 +541,8 @@ export default Plugin.define({
               for (;;) {
                 const selection = context.ui.dialog.select({
                   title: `Session timeline · ${rows.length} turns`,
-                  options: rows.map((message: any) => {
+                  // newest turns first
+                  options: rows.slice().reverse().map((message: any) => {
                     const duration = dur(message.time?.created, message.time?.completed)
                     return {
                       title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
