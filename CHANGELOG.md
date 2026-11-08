@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 — 2026-11-08
+
+- `/time` is now a toggle: a repeated command closes the panel
+  (`context.ui.panel.current()` + `panel.close()`).
+
 ## 0.2.1 — 2026-10-27
 
 - Sort `Session Timings` rows oldest to newest so the sidebar always shows the

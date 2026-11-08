@@ -558,7 +558,10 @@ export default Plugin.define({
             title: "Time: session timeline",
             slash: { name: "time" },
             run: () => {
-              context.ui.panel.open("session-time.timeline")
+              // toggle: repeated /time closes the panel
+              const active = context.ui.panel.current()
+              if (active?.name === "session-time.timeline") context.ui.panel.close()
+              else context.ui.panel.open("session-time.timeline")
             },
           },
         ],
