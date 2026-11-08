@@ -525,7 +525,7 @@ export default Plugin.define({
                 context.ui.toast.show({ message: "No assistant turns yet" })
                 return
               }
-              await context.ui.dialog.select({
+              const selection = context.ui.dialog.select({
                 title: `Session timeline · ${rows.length} turns`,
                 options: rows.map((message: any) => {
                   const duration = dur(message.time?.created, message.time?.completed)
@@ -553,6 +553,9 @@ export default Plugin.define({
                   },
                 ],
               })
+              // widen the popup (palette-style): presentation of the active dialog
+              context.ui.dialog.set({ size: "xlarge", centered: true })
+              await selection
             },
           },
         ],
