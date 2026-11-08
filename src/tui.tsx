@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, For, onMount, Show } from "solid-js"
-import { TextAttributes, t, fg, bold } from "@opentui/core"
+import { TextAttributes } from "@opentui/core"
 
 // opencode-session-time: timestamps for your OpenCode sessions.
 //
@@ -575,34 +575,24 @@ export default Plugin.define({
                 const cache = tok.cache ?? {}
                 const cost = typeof message.cost === "number" ? message.cost : 0
                 const finish = message.finish ?? message.rawFinish ?? "—"
-                await new Promise<void>((resolve) => {
-                  context.ui.dialog.set({ size: "xlarge", centered: true })
-                  context.ui.dialog.show(
-                    () => (
-                      <box
-                        flexDirection="column"
-                        border
-                        title="Turn details"
-                        titleColor={context.theme.text.base}
-                        titleAlignment="left"
-                        bottomTitle="Esc — back to the timeline"
-                        bottomTitleAlignment="left"
-                        padding={1}
-                      >
-                        <text>{t`${fg(context.theme.text.muted)("started:")}${fg(context.theme.text.base)(`   ${fmt(message.time?.created)}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("completed:")}${fg(context.theme.text.base)(` ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("duration:")}${fg(context.theme.text.base)(`  ${duration ?? "—"}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("agent:")}${fg(context.theme.text.base)(`     ${message.agent ?? "—"}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("model:")}${fg(context.theme.text.base)(`     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("tokens:")}${fg(context.theme.text.base)(`    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("cost:")}${fg(context.theme.text.base)(`      ${cost ? `$${cost.toFixed(4)}` : "$0"}`)}`}</text>
-                        <text>{t`${fg(context.theme.text.muted)("finish:")}${fg(context.theme.text.base)(`    ${String(finish)}`)}`}</text>
-                        <text> </text>
-                        <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
-                      </box>
-                    ),
-                  )
+                // promise-based dialog: Escape is documented to resolve it
+                const details = context.ui.dialog.alert({
+                  title: "Turn details",
+                  message: [
+                    `started:   ${fmt(message.time?.created)}`,
+                    `completed: ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`,
+                    `duration:  ${duration ?? "—"}`,
+                    `agent:     ${message.agent ?? "—"}`,
+                    `model:     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`,
+                    `tokens:    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`,
+                    `cost:      ${cost ? `$${cost.toFixed(4)}` : "$0"}`,
+                    `finish:    ${String(finish)}`,
+                    ``,
+                    preview(message) || "no text reply",
+                  ].join("\n"),
                 })
+                context.ui.dialog.set({ size: "xlarge", centered: true })
+                await details
               }
             },
           },
