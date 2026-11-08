@@ -537,68 +537,65 @@ export default Plugin.define({
                 context.ui.toast.show({ message: "No assistant turns yet" })
                 return
               }
-              const selection = context.ui.dialog.select({
-                title: `Session timeline · ${rows.length} turns`,
-                options: rows.map((message: any) => {
-                  const duration = dur(message.time?.created, message.time?.completed)
-                  return {
-                    title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
-                      message.model?.id ?? message.model ?? "—"
-                    }${duration ? ` · ${duration}` : ""}`,
-                    value: message.id,
-                    // D: preview of the text reply
-                    description: preview(message) || "no text reply",
-                  }
-                }),
-                search: (query, options) =>
-                  options.filter((option) =>
-                    `${option.title} ${option.description ?? ""}`.toLowerCase().includes(query.toLowerCase()),
-                  ),
-                actions: [
-                  {
-                    bind: "ctrl+a",
-                    title: "Close",
-                    side: "right",
-                    selection: "none",
-                    onTrigger: () => context.ui.dialog.clear(),
-                  },
-                ],
-              })
-              // widen the popup (palette-style): presentation of the active dialog
-              context.ui.dialog.set({ size: "xlarge", centered: true })
-              const picked = await selection
-              if (picked) {
-                // A: details popup for the picked turn
+              // Esc in details returns to the timeline; Esc on the list exits
+              for (;;) {
+                const selection = context.ui.dialog.select({
+                  title: `Session timeline · ${rows.length} turns`,
+                  options: rows.map((message: any) => {
+                    const duration = dur(message.time?.created, message.time?.completed)
+                    return {
+                      title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
+                        message.model?.id ?? message.model ?? "—"
+                      }${duration ? ` · ${duration}` : ""}`,
+                      value: message.id,
+                      description: preview(message) || "no text reply",
+                    }
+                  }),
+                  search: (query, options) =>
+                    options.filter((option) =>
+                      `${option.title} ${option.description ?? ""}`.toLowerCase().includes(query.toLowerCase()),
+                    ),
+                  actions: [
+                    {
+                      bind: "ctrl+a",
+                      title: "Close",
+                      side: "right",
+                      selection: "none",
+                      onTrigger: () => context.ui.dialog.clear(),
+                    },
+                  ],
+                })
+                context.ui.dialog.set({ size: "xlarge", centered: true })
+                const picked = await selection
+                if (!picked) return
                 const message: any = rows.find((m: any) => m.id === picked)
-                if (message) {
-                  const duration = dur(message.time?.created, message.time?.completed)
-                  const tok = message.tokens ?? {}
-                  const cache = tok.cache ?? {}
-                  const cost = typeof message.cost === "number" ? message.cost : 0
-                  const finish = message.finish ?? message.rawFinish ?? "—"
-                  const line = (label: string, value: string) => (
-                    <text>
-                      <text fg={context.theme.text.muted}>{label}: </text>
-                      <text fg={context.theme.text.base}>{value}</text>
-                    </text>
+                if (!message) return
+                const duration = dur(message.time?.created, message.time?.completed)
+                const tok = message.tokens ?? {}
+                const cache = tok.cache ?? {}
+                const cost = typeof message.cost === "number" ? message.cost : 0
+                const finish = message.finish ?? message.rawFinish ?? "—"
+                await new Promise<void>((resolve) => {
+                  context.ui.dialog.set({ size: "xlarge", centered: true })
+                  context.ui.dialog.show(
+                    () => (
+                      <box flexDirection="column" padding={1}>
+                        <text>{t`${bold("Turn details")}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("started:")}${fg(context.theme.text.base)(`   ${fmt(message.time?.created)}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("completed:")}${fg(context.theme.text.base)(` ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("duration:")}${fg(context.theme.text.base)(`  ${duration ?? "—"}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("agent:")}${fg(context.theme.text.base)(`     ${message.agent ?? "—"}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("model:")}${fg(context.theme.text.base)(`     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("tokens:")}${fg(context.theme.text.base)(`    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("cost:")}${fg(context.theme.text.base)(`      ${cost ? `$${cost.toFixed(4)}` : "$0"}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("finish:")}${fg(context.theme.text.base)(`    ${String(finish)}`)}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
+                        <text>{t`${fg(context.theme.text.muted)("Esc — back to the timeline")}`}</text>
+                      </box>
+                    ),
+                    () => resolve(),
                   )
-                  context.ui.dialog.set({ size: "large", centered: true })
-                  context.ui.dialog.show(() => (
-                    <box flexDirection="column">
-                      <text>{t`${bold("Turn details")}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("started:")}${fg(context.theme.text.base)(`   ${fmt(message.time?.created)}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("completed:")}${fg(context.theme.text.base)(` ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("duration:")}${fg(context.theme.text.base)(`  ${duration ?? "—"}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("agent:")}${fg(context.theme.text.base)(`     ${message.agent ?? "—"}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("model:")}${fg(context.theme.text.base)(`     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("tokens:")}${fg(context.theme.text.base)(`    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("cost:")}${fg(context.theme.text.base)(`      ${cost ? `$${cost.toFixed(4)}` : "$0"}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("finish:")}${fg(context.theme.text.base)(`    ${String(finish)}`)}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)(preview(message) || "no text reply")}`}</text>
-                      <text>{t`${fg(context.theme.text.muted)("Esc — close")}`}</text>
-                    </box>
-                  ))
-                }
+                })
               }
             },
           },
