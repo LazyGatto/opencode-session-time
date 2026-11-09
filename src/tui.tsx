@@ -117,6 +117,10 @@ const currentTurn = (list: any[], fallbackUser?: number) => {
     return lastUser >= 0 || fallbackUser ? { waiting: true } : undefined
   }
 
+  // A new user message without an assistant response yet means the next turn
+  // has not started. Do not keep showing the previous turn's elapsed time.
+  if (lastUser > lastAssistant) return { waiting: true }
+
   let user = -1
   for (let i = lastAssistant - 1; i >= 0; i--) {
     if (list[i].type === "user") {

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Reset the prompt-footer stopwatch to `00:00` when a new user message is waiting
+  for its first assistant step, instead of continuing the previous turn's value.
+
 ## 0.3.0 — 2026-11-08
 
 - `/time` is now a palette-style popup (`dialog.select`): searchable timeline with the
