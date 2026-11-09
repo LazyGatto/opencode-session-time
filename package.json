@@ -6,9 +6,9 @@
   "contributors": [
     "Ran Sagy (https://github.com/ransagy)"
   ],
-  "homepage": "https://github.com/ransagy/opencode-session-time#readme",
+  "homepage": "https://github.com/LazyGatto/opencode-session-time#readme",
   "bugs": {
-    "url": "https://github.com/ransagy/opencode-session-time/issues"
+    "url": "https://github.com/LazyGatto/opencode-session-time/issues"
   },
   "type": "module",
   "exports": {
@@ -24,7 +24,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ransagy/opencode-session-time.git"
+    "url": "git+https://github.com/LazyGatto/opencode-session-time.git"
   },
   "dependencies": {
     "@opencode/plugin": "latest"
