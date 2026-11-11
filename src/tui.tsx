@@ -1,7 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { Plugin } from "@opencode/plugin/tui"
-import { createMemo, createSignal, onMount } from "solid-js"
-import { TextAttributes } from "@opentui/core"
+import { createMemo, createSignal, onMount, Show } from "solid-js"
 
 // opencode-session-time: timestamps for your OpenCode sessions.
 //
@@ -533,6 +532,13 @@ export default Plugin.define({
     // 2) "Session Timings" block in the sidebar (styled like the built-in Context/MCP blocks).
     const SessionTimings = (props: { sessionID: string }) => {
       onMount(() => ensureAnchors(props.sessionID))
+      const theme = context.theme
+      const [view, updateView] = context.storage.store("view", { initial: { open: true } })
+      const toggle = () => {
+        void updateView((draft) => {
+          draft.open = !draft.open
+        }).catch(() => {})
+      }
 
       const model = createMemo(() => {
         const list = messages(context, props.sessionID)
@@ -568,28 +574,68 @@ export default Plugin.define({
           started: fmt(session?.time?.created),
           counters: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
           input: fmt(inputTime),
-          inputLabel: " input",
+          inputLabel: "  input",
           thought: fmt(thoughtTime),
-          thoughtLabel: `${thoughtCount > 1 ? ` thought ×${thoughtCount}` : " thought"}${thoughtDuration ? ` · ${thoughtDuration}` : ""}`,
+          thoughtLabel: `  ${thoughtCount > 1 ? `thought ×${thoughtCount}` : "thought"}${thoughtDuration ? ` · ${thoughtDuration}` : ""}`,
           reply: fmt(replyTime),
-          replyLabel: ` reply${replyDuration ? ` · ${replyDuration}` : ""}`,
+          replyLabel: `  reply${replyDuration ? ` · ${replyDuration}` : ""}`,
           showTools: tools.total > 0,
           tools: String(tools.total),
-          toolsLabel: ` tools${tools.mcp ? ` · ${tools.mcp} mcp` : ""}${toolTop ? `  ${toolTop}` : ""}`,
+          toolsLabel: `  tools${tools.mcp ? ` · ${tools.mcp} mcp` : ""}${toolTop ? `  ${toolTop}` : ""}`,
         }
       })
 
       return (
         <box flexDirection="column">
-          <text fg={context.theme.text.base} attributes={TextAttributes.BOLD} content="Session" />
-          <box flexDirection="row"><text fg={context.theme.text.base} content={model().started} /><text fg={context.theme.text.muted} content=" started" /></box>
-          <text fg={context.theme.text.muted} content={model().counters} />
-          <text content=" " />
-          <text fg={context.theme.text.base} attributes={TextAttributes.BOLD} content="Last answer" />
-          <box flexDirection="row"><text fg={context.theme.text.base} content={model().input} /><text fg={context.theme.text.muted} content={model().inputLabel} /></box>
-          <box flexDirection="row"><text fg={context.theme.text.base} content={model().thought} /><text fg={context.theme.text.muted} content={model().thoughtLabel} /></box>
-          <box flexDirection="row"><text fg={context.theme.text.base} content={model().reply} /><text fg={context.theme.text.muted} content={model().replyLabel} /></box>
-          {model().showTools && <box flexDirection="row"><text fg={context.theme.text.base} content={model().tools} /><text fg={context.theme.text.muted} content={model().toolsLabel} /></box>}
+          <box flexDirection="row" onMouseUp={toggle}>
+            <text content={view.open ? "▼ " : "▶ "} />
+            <text>
+              <b>Session</b>
+              <Show when={!view.open}>
+                <span style={{ fg: theme.text.muted }}> ({model().counters})</span>
+              </Show>
+            </text>
+          </box>
+
+          <Show when={view.open}>
+            <text>
+              <span style={{ fg: theme.text.muted }}>● </span>
+              <span style={{ fg: theme.text.base }}>{model().started}</span>
+              <span style={{ fg: theme.text.muted }}>  started</span>
+            </text>
+            <text>
+              <span style={{ fg: theme.text.muted }}>  {model().counters}</span>
+            </text>
+            <text> </text>
+            <box flexDirection="row" onMouseUp={() => void openTimeline()}>
+              <text>
+                <b>Last answer</b>
+                <span style={{ fg: theme.text.muted }}>  ⏱</span>
+              </text>
+            </box>
+            <text>
+              <span style={{ fg: theme.text.base }}>● </span>
+              <span style={{ fg: theme.text.base }}>{model().input}</span>
+              <span style={{ fg: theme.text.muted }}>{model().inputLabel}</span>
+            </text>
+            <text>
+              <span style={{ fg: theme.text.feedback.warning.base }}>● </span>
+              <span style={{ fg: theme.text.base }}>{model().thought}</span>
+              <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
+            </text>
+            <text>
+              <span style={{ fg: theme.text.feedback.success.base }}>● </span>
+              <span style={{ fg: theme.text.base }}>{model().reply}</span>
+              <span style={{ fg: theme.text.muted }}>{model().replyLabel}</span>
+            </text>
+            <Show when={model().showTools}>
+              <text>
+                <span style={{ fg: theme.text.muted }}>● </span>
+                <span style={{ fg: theme.text.base }}>{model().tools}</span>
+                <span style={{ fg: theme.text.muted }}>{model().toolsLabel}</span>
+              </text>
+            </Show>
+          </Show>
         </box>
       )
     }
