@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.3 — 2026-11-11
+
+- `thought` row now aggregates all reasoning phases since the last user input:
+  `thought ×N · <total duration>` (single phase stays `thought · <duration>`).
+
 ## 0.3.2 — 2026-11-11
 
 - Sidebar `Session Timings` again shows plain timestamps/durations refreshed on data events.

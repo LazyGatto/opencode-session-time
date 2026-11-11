@@ -164,6 +164,29 @@ const lastThought = (list: any[]) => {
   }
 }
 
+const thoughtStats = (list: any[]) => {
+  // reasoning phases since the last user input (all assistant steps of the turn)
+  let userIdx = -1
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].type === "user") { userIdx = i; break }
+  }
+  let count = 0
+  let totalMs = 0
+  let last: any
+  for (let i = list.length - 1; i > userIdx; i--) {
+    const message = list[i]
+    if (message.type !== "assistant" || !Array.isArray(message.content)) continue
+    for (const part of message.content) {
+      if (part.type !== "reasoning" || !part.time?.created) continue
+      count++
+      if (!last) last = part
+      const end = part.time.completed
+      if (end && end >= part.time.created) totalMs += end - part.time.created
+    }
+  }
+  return { last, count, totalMs }
+}
+
 const lastReply = (list: any[]) => {
   for (let i = list.length - 1; i >= 0; i--) {
     const message = list[i]
@@ -176,6 +199,7 @@ type Anchor = {
   user?: number
   thought?: number
   thoughtDuration?: string
+  thoughtCount?: number
   reply?: number
   replyDuration?: string
   updated?: number
@@ -202,9 +226,10 @@ const mergeAnchor = (current: Anchor, patch: Anchor): Anchor | undefined => {
     changed = true
   }
   if (patch.thought !== undefined && patch.thought >= (current.thought ?? 0)) {
-    if (patch.thought !== current.thought || patch.thoughtDuration !== current.thoughtDuration) {
+    if (patch.thought !== current.thought || patch.thoughtDuration !== current.thoughtDuration || patch.thoughtCount !== current.thoughtCount) {
       next.thought = patch.thought
       next.thoughtDuration = patch.thoughtDuration
+      next.thoughtCount = patch.thoughtCount
       changed = true
     }
   }
@@ -244,13 +269,14 @@ export default Plugin.define({
     const rememberFromList = (sessionID: string) => {
       const list = messages(context, sessionID)
       const user = lastUser(list)
-      const thought = lastThought(list)
+      const thought = thoughtStats(list)
       const reply = lastReply(list)
       const patch: Anchor = {}
       if (user?.time?.created) patch.user = user.time.created
-      if (thought?.time?.created) {
-        patch.thought = thought.time.created
-        patch.thoughtDuration = dur(thought.time?.created, thought.time?.completed)
+      if (thought.last?.time?.created) {
+        patch.thought = thought.last.time.created
+        patch.thoughtDuration = dur(0, thought.totalMs)
+        patch.thoughtCount = thought.count
       }
       if (reply?.time?.completed) {
         patch.reply = reply.time.completed
@@ -320,13 +346,20 @@ export default Plugin.define({
             }
           }
           if (needThought) {
-            const part = (message.content ?? []).find(
+            const phases = (message.content ?? []).filter(
               (item: any) => item.type === "reasoning" && item.time?.created,
             )
-            if (part) {
+            if (phases.length > 0) {
+              const last = phases[phases.length - 1]
+              const totalMs = phases.reduce(
+                (sum: number, p: any) =>
+                  sum + (p.time?.completed && p.time.completed >= p.time.created ? p.time.completed - p.time.created : 0),
+                0,
+              )
               remember(sessionID, {
-                thought: part.time.created,
-                thoughtDuration: dur(part.time.created, part.time.completed),
+                thought: last.time.created,
+                thoughtDuration: dur(0, totalMs),
+                thoughtCount: phases.length,
                 updated: context.data.session.get(sessionID)?.time?.updated,
               })
               needThought = false
@@ -439,18 +472,20 @@ export default Plugin.define({
         const session = context.data.session.get(props.sessionID)
         const anchor = anchors[props.sessionID] ?? {}
         const input = lastUser(list)
-        const thought = lastThought(list)
+        const thought = thoughtStats(list)
         const reply = lastReply(list)
         const cachedInput = input?.time?.created ?? 0
-        const cachedThought = thought?.time?.created ?? 0
+        const cachedThought = thought.last?.time?.created ?? 0
         const cachedReply = reply?.time?.completed ?? 0
         const inputTime = Math.max(cachedInput, anchor.user ?? 0) || undefined
         const thoughtTime = Math.max(cachedThought, anchor.thought ?? 0) || undefined
         const replyTime = Math.max(cachedReply, anchor.reply ?? 0) || undefined
         const thoughtDuration =
           cachedThought >= (anchor.thought ?? 0)
-            ? dur(thought?.time?.created, thought?.time?.completed)
+            ? dur(0, thought.totalMs)
             : anchor.thoughtDuration
+        const thoughtCount =
+          cachedThought >= (anchor.thought ?? 0) ? thought.count : (anchor.thoughtCount ?? 1)
         const replyDuration =
           cachedReply >= (anchor.reply ?? 0)
             ? dur(reply?.time?.created, reply?.time?.completed)
@@ -463,7 +498,7 @@ export default Plugin.define({
           thought: {
             at: thoughtTime,
             rank: 2,
-            text: line(thoughtTime, "thought", thoughtDuration),
+            text: line(thoughtTime, thoughtCount > 1 ? `thought ×${thoughtCount}` : "thought", thoughtDuration),
           },
           reply: { at: replyTime, rank: 3, text: line(replyTime, "reply", replyDuration) },
         }
