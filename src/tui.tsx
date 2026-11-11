@@ -153,6 +153,52 @@ const currentTurn = (list: any[], fallbackUser?: number) => {
   }
 }
 
+const BUILTIN_TOOLS = new Set([
+  "shell", "read", "write", "edit", "glob", "grep", "webfetch", "websearch",
+  "task", "subagent", "skill", "todo", "todowrite", "todoread", "question",
+  "execute", "ls", "patch", "apply_patch", "codesearch",
+])
+
+type SessionCounts = {
+  user: number
+  steps: number
+  mcp: number
+  tools: Record<string, number>
+  capped: boolean
+  at: number
+}
+
+const tallyToolParts = (message: any, counts: SessionCounts) => {
+  for (const part of message.content ?? []) {
+    if (part.type !== "tool") continue
+    const name = part.name ?? "?"
+    counts.tools[name] = (counts.tools[name] ?? 0) + 1
+    if (!BUILTIN_TOOLS.has(name)) counts.mcp++
+  }
+}
+
+const turnTools = (list: any[]) => {
+  let userIdx = -1
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (list[i].type === "user") { userIdx = i; break }
+  }
+  let total = 0
+  let mcp = 0
+  const counts: Record<string, number> = {}
+  for (let i = list.length - 1; i > userIdx; i--) {
+    const message = list[i]
+    if (message.type !== "assistant" || !Array.isArray(message.content)) continue
+    for (const part of message.content) {
+      if (part.type !== "tool") continue
+      total++
+      const name = part.name ?? "?"
+      counts[name] = (counts[name] ?? 0) + 1
+      if (!BUILTIN_TOOLS.has(name)) mcp++
+    }
+  }
+  return { total, mcp, counts }
+}
+
 const lastUser = (list: any[]) => {
   for (let i = list.length - 1; i >= 0; i--) {
     if (list[i].type === "user") return list[i]
@@ -190,48 +236,6 @@ const lastReply = (list: any[]) => {
   }
 }
 
-const BUILTIN_TOOLS = new Set([
-  "shell", "read", "write", "edit", "glob", "grep", "webfetch", "websearch",
-  "task", "subagent", "skill", "todo", "todowrite", "todoread", "question",
-  "execute", "ls", "patch", "apply_patch", "codesearch",
-])
-
-const turnTools = (list: any[]) => {
-  let userIdx = -1
-  for (let i = list.length - 1; i >= 0; i--) {
-    if (list[i].type === "user") { userIdx = i; break }
-  }
-  const counts: Record<string, number> = {}
-  let total = 0
-  let mcp = 0
-  for (let i = list.length - 1; i > userIdx; i--) {
-    const message = list[i]
-    if (message.type !== "assistant" || !Array.isArray(message.content)) continue
-    for (const part of message.content) {
-      if (part.type !== "tool") continue
-      total++
-      const name = part.name ?? "?"
-      counts[name] = (counts[name] ?? 0) + 1
-      if (!BUILTIN_TOOLS.has(name)) mcp++
-    }
-  }
-  const top = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name, n]) => `${name} ${n}`)
-    .join(" · ")
-  return { total, mcp, top }
-}
-
-type SessionCounts = {
-  user: number
-  steps: number
-  mcp: number
-  tools: Record<string, number>
-  capped: boolean
-  at: number
-}
-
 type Anchor = {
   user?: number
   thought?: number
@@ -245,3 +249,459 @@ type Anchor = {
 
 type AnchorStore = Record<string, Anchor>
 
+const mergeAnchor = (current: Anchor, patch: Anchor): Anchor | undefined => {
+  const next: Anchor = { ...current }
+  let changed = false
+
+  if (patch.user !== undefined && patch.user > (current.user ?? 0)) {
+    next.user = patch.user
+    changed = true
+  }
+  if (patch.thought !== undefined && patch.thought >= (current.thought ?? 0)) {
+    if (patch.thought !== current.thought || patch.thoughtDuration !== current.thoughtDuration || patch.thoughtCount !== current.thoughtCount) {
+      next.thought = patch.thought
+      next.thoughtDuration = patch.thoughtDuration
+      next.thoughtCount = patch.thoughtCount
+      changed = true
+    }
+  }
+  if (patch.reply !== undefined && patch.reply >= (current.reply ?? 0)) {
+    if (patch.reply !== current.reply || patch.replyDuration !== current.replyDuration) {
+      next.reply = patch.reply
+      next.replyDuration = patch.replyDuration
+      changed = true
+    }
+  }
+  if (patch.counts && (!current.counts || patch.counts.at >= current.counts.at)) {
+    next.counts = patch.counts
+    changed = true
+  }
+  if (patch.updated !== undefined && patch.updated > (current.updated ?? 0)) {
+    next.updated = patch.updated
+    changed = true
+  }
+  return changed ? next : undefined
+}
+
+export default Plugin.define({
+  id: "session-time",
+  setup(context) {
+    // One tick drives every slot: any data event re-renders, plus a 1s timer for the stopwatch and ages.
+    const [tick, setTick] = createSignal(0)
+    const bump = () => setTick((t) => t + 1)
+
+    const [anchors, updateAnchors] = context.storage.store<AnchorStore>("session-timings-v1", {
+      initial: {},
+    })
+
+    const remember = (sessionID: string, patch: Anchor) => {
+      if (!mergeAnchor(anchors[sessionID] ?? {}, patch)) return
+      void updateAnchors((draft) => {
+        const next = mergeAnchor(draft[sessionID] ?? {}, patch)
+        if (next) draft[sessionID] = next
+      }).catch(() => {})
+    }
+
+    const windowCounts = (list: any[]): SessionCounts => {
+      const counts: SessionCounts = { user: 0, steps: 0, mcp: 0, tools: {}, capped: true, at: Date.now() }
+      for (const m of list) {
+        if (m.type === "user") counts.user++
+        if (m.type === "assistant") { counts.steps++; tallyToolParts(m, counts) }
+      }
+      return counts
+    }
+
+    const fullCounts = async (sessionID: string): Promise<SessionCounts> => {
+      const counts: SessionCounts = { user: 0, steps: 0, mcp: 0, tools: {}, capped: false, at: Date.now() }
+      let cursor: string | undefined
+      for (let page = 0; page < 40; page++) {
+        const res: any = await context.client.message
+          .list({ sessionID, limit: 100, cursor })
+          .catch(() => undefined)
+        if (!res) break
+        for (const m of res.data as any[]) {
+          if (m.type === "user") counts.user++
+          if (m.type === "assistant") { counts.steps++; tallyToolParts(m, counts) }
+        }
+        cursor = res.cursor?.next ?? undefined
+        if (!cursor) break
+      }
+      return counts
+    }
+
+    const rememberFromList = (sessionID: string) => {
+      const list = messages(context, sessionID)
+      const user = lastUser(list)
+      const thought = thoughtStats(list)
+      const reply = lastReply(list)
+      const patch: Anchor = {}
+      if (user?.time?.created) patch.user = user.time.created
+      if (thought.last?.time?.created) {
+        patch.thought = thought.last.time.created
+        patch.thoughtDuration = durMs(thought.totalMs)
+        patch.thoughtCount = thought.count
+      }
+      if (reply?.time?.completed) {
+        patch.reply = reply.time.completed
+        patch.replyDuration = dur(reply.time?.created, reply.time?.completed)
+      }
+      patch.counts = windowCounts(list)
+      const updated = context.data.session.get(sessionID)?.time?.updated
+      if (updated) patch.updated = updated
+      remember(sessionID, patch)
+    }
+
+    const backfillState = new Map<string, { at: number; done: boolean }>()
+
+    const runBackfill = async (sessionID: string) => {
+      const list = messages(context, sessionID)
+      const cachedUser = lastUser(list)
+      const cachedThought = thoughtStats(list).last
+      const cachedReply = lastReply(list)
+      rememberFromList(sessionID)
+
+      let needReply = !cachedReply
+      let needThought = !cachedThought
+      if (cachedUser && !needReply && !needThought) return
+
+      const response = await context.client.message.list({
+        sessionID,
+        type: "user",
+        order: "desc",
+        limit: 1,
+      })
+      const user = response.data[0] as any
+      if (user?.time?.created) {
+        remember(sessionID, {
+          user: user.time.created,
+          updated: context.data.session.get(sessionID)?.time?.updated,
+        })
+      }
+
+      if (!needReply && !needThought) return
+      // The cursor encodes a timeline position. Reusing the last-user cursor with
+      // the assistant type walks backwards from the user instead of through the
+      // current turn's tool loop, which is what makes long sessions cheap to scan.
+      let cursor = response.cursor.next ?? undefined
+      if (!cursor) return
+
+      for (let page = 0; page < 10 && (needReply || needThought); page++) {
+        const pageResult = await context.client.message
+          .list({
+            sessionID,
+            type: "assistant",
+            limit: 50,
+            cursor,
+          })
+          .catch(() => undefined)
+        if (!pageResult) break
+        for (const message of pageResult.data as any[]) {
+          if (needReply && message.time?.completed) {
+            const part = (message.content ?? []).find(
+              (item: any) => item.type === "text" && item.text?.trim(),
+            )
+            if (part) {
+              remember(sessionID, {
+                reply: message.time.completed,
+                replyDuration: dur(message.time.created, message.time.completed),
+                updated: context.data.session.get(sessionID)?.time?.updated,
+              })
+              needReply = false
+            }
+          }
+          if (needThought) {
+            const phases = (message.content ?? []).filter(
+              (item: any) => item.type === "reasoning" && item.time?.created,
+            )
+            if (phases.length > 0) {
+              const last = phases[phases.length - 1]
+              const totalMs = phases.reduce(
+                (sum: number, p: any) =>
+                  sum + (p.time?.completed && p.time.completed >= p.time.created ? p.time.completed - p.time.created : 0),
+                0,
+              )
+              remember(sessionID, {
+                thought: last.time.created,
+                thoughtDuration: durMs(totalMs),
+                thoughtCount: phases.length,
+                updated: context.data.session.get(sessionID)?.time?.updated,
+              })
+              needThought = false
+            }
+          }
+          if (!needReply && !needThought) break
+        }
+        cursor = pageResult.cursor.next ?? undefined
+        if (!cursor) break
+      }
+    }
+
+    const ensureAnchors = (sessionID: string) => {
+      const now = Date.now()
+      const state = backfillState.get(sessionID)
+      const sessionUpdated = context.data.session.get(sessionID)?.time?.updated ?? 0
+      const anchorUpdated = anchors[sessionID]?.updated ?? 0
+      if (state?.done && sessionUpdated <= anchorUpdated) return
+      if (state && now - state.at < 10_000) return
+      backfillState.set(sessionID, { at: now, done: false })
+      if (!anchors[sessionID]?.counts || anchors[sessionID]?.counts?.capped) {
+        void fullCounts(sessionID).then((c) => remember(sessionID, { counts: c })).catch(() => {})
+      }
+      void runBackfill(sessionID)
+        .then(() => {
+          backfillState.set(sessionID, { at: Date.now(), done: true })
+        })
+        .catch(() => {})
+    }
+
+    let dirty = true
+    let wasRunning = false
+    let syncing = false
+    let lastSync = 0
+    const unlisten = context.data.listen(() => {
+      dirty = true
+      bump()
+    })
+
+    const refresh = () => {
+      const route = context.ui.router.current()
+      const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
+      if (!sessionID) {
+        bump()
+        return
+      }
+
+      ensureAnchors(sessionID)
+
+      const now = Date.now()
+      const running = context.data.session.status(sessionID) === "running"
+      const transition = wasRunning && !running
+      wasRunning = running
+      const due =
+        (dirty && now - lastSync >= 1_000) ||
+        (running && now - lastSync >= 5_000) ||
+        transition
+
+      if (!due || syncing) {
+        bump()
+        return
+      }
+
+      dirty = false
+      lastSync = now
+      syncing = true
+      Promise.allSettled([
+        context.data.session.sync(sessionID),
+        context.data.session.message.sync(sessionID),
+      ]).finally(() => {
+        syncing = false
+        rememberFromList(sessionID)
+        bump()
+      })
+    }
+
+    const timer = setInterval(refresh, 1_000)
+    refresh()
+
+    // 1) Current-turn elapsed time in the prompt footer.
+    const PromptClock = () => {
+      onMount(() => {
+        const route = context.ui.router.current()
+        const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
+        if (sessionID) ensureAnchors(sessionID)
+      })
+
+      const elapsed = createMemo(() => {
+        tick()
+        const route = context.ui.router.current()
+        const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
+        if (!sessionID) return "—"
+
+        const turn = currentTurn(messages(context, sessionID), anchors[sessionID]?.user)
+        if (!turn) return "—"
+        if ("waiting" in turn) return "00:00"
+
+        const status = context.data.session.status(sessionID)
+        const running = status === "running" || (status === undefined && !turn.completed)
+        return stopwatch((running ? Date.now() : turn.last) - turn.start)
+      })
+
+      return <text fg={context.theme.text.muted} content={`⏱ ${elapsed()}`}
+        onMouseUp={(e: any) => { e?.stopPropagation?.(); void openTimeline() }} />
+    }
+
+    // 2) "Session Timings" block in the sidebar (styled like the built-in Context/MCP blocks).
+    const SessionTimings = (props: { sessionID: string }) => {
+      onMount(() => ensureAnchors(props.sessionID))
+
+      const model = createMemo(() => {
+        const list = messages(context, props.sessionID)
+        const session = context.data.session.get(props.sessionID)
+        const anchor = anchors[props.sessionID] ?? {}
+        const input = lastUser(list)
+        const thought = thoughtStats(list)
+        const reply = lastReply(list)
+        const tools = turnTools(list)
+        const counts = anchor.counts ?? windowCounts(list)
+
+        const cachedThought = thought.last?.time?.created ?? 0
+        const cachedReply = reply?.time?.completed ?? 0
+        const inputTime = Math.max(input?.time?.created ?? 0, anchor.user ?? 0) || undefined
+        const thoughtTime = Math.max(cachedThought, anchor.thought ?? 0) || undefined
+        const replyTime = Math.max(cachedReply, anchor.reply ?? 0) || undefined
+        const thoughtDuration =
+          cachedThought >= (anchor.thought ?? 0) ? durMs(thought.totalMs) : anchor.thoughtDuration
+        const thoughtCount =
+          cachedThought >= (anchor.thought ?? 0) ? thought.count : (anchor.thoughtCount ?? 1)
+        const replyDuration =
+          cachedReply >= (anchor.reply ?? 0)
+            ? dur(reply?.time?.created, reply?.time?.completed)
+            : anchor.replyDuration
+
+        const B = context.theme.text.base
+        const M = context.theme.text.muted
+        const row = (time: number | undefined, label: string, extra?: string) =>
+          t`${fg(B)(fmt(time))}  ${fg(M)(label)}${extra ? fg(M)(` · ${extra}`) : ""}`
+        const toolTop = Object.entries(counts.tools)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([n, c]) => `${n} ${c}`)
+          .join(" · ")
+
+        return {
+          started: session?.time?.created,
+          counters: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
+          input: row(inputTime, "input"),
+          thought: row(thoughtTime, thoughtCount > 1 ? `thought ×${thoughtCount}` : "thought", thoughtDuration),
+          reply: row(replyTime, "reply", replyDuration),
+          tools: tools.mcp
+            ? t`${fg(B)(String(tools.total))} ${fg(M)("tools")} · ${fg(B)(String(tools.mcp))} ${fg(M)("mcp")}${toolTop ? fg(M)(`  ${toolTop}`) : ""}`
+            : t`${fg(B)(String(tools.total))} ${fg(M)("tools")}${toolTop ? fg(M)(`  ${toolTop}`) : ""}`,
+        }
+      })
+
+      return (
+        <box flexDirection="column">
+          <text>{t`${bold("Session")}`}</text>
+          <text>{t`${fg(context.theme.text.base)(fmt(model().started))}  ${fg(context.theme.text.muted)("started")}`}</text>
+          <text>{t`${fg(context.theme.text.muted)(model().counters)}`}</text>
+          <text> </text>
+          <text>{t`${bold("Last answer")}`}</text>
+          <text>{model().input}</text>
+          <text>{model().thought}</text>
+          <text>{model().reply}</text>
+          <text>{model().tools}</text>
+        </box>
+      )
+    }
+
+    const disposeClock = context.ui.slot({
+      append: "prompt.footer.status",
+      render: () => <PromptClock />,
+    })
+
+    const disposeSide = context.ui.slot({
+      append: "sidebar.content",
+      render: ({ sessionID }) => <SessionTimings sessionID={sessionID} />,
+    })
+
+    // Opens the /time timeline popup — shared by the /time command and the footer click.
+    const openTimeline = async () => {
+              // palette-style popup: searchable, navigable, Esc closes
+              const route = context.ui.router.current()
+              const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
+              if (sessionID) await context.data.session.message.sync(sessionID)
+              const rows = (sessionID ? messages(context, sessionID) : []).filter(
+                (message: any) => message.type === "assistant",
+              )
+              if (rows.length === 0) {
+                context.ui.toast.show({ message: "No assistant turns yet" })
+                return
+              }
+              // Esc in details returns to the timeline; Esc on the list exits
+              for (;;) {
+                const selection = context.ui.dialog.select({
+                  title: `Session timeline · ${rows.length} turns`,
+                  // newest turns first
+                  options: rows.slice().reverse().map((message: any) => {
+                    const duration = dur(message.time?.created, message.time?.completed)
+                    return {
+                      title: `${fmt(message.time?.created)} · ${message.agent ?? "—"} · ${
+                        message.model?.id ?? message.model ?? "—"
+                      }${duration ? ` · ${duration}` : ""}`,
+                      value: message.id,
+                      description: preview(message) || "no text reply",
+                    }
+                  }),
+                  search: (query, options) =>
+                    options.filter((option) =>
+                      `${option.title} ${option.description ?? ""}`.toLowerCase().includes(query.toLowerCase()),
+                    ),
+                  actions: [
+                    {
+                      bind: "ctrl+a",
+                      title: "Close",
+                      side: "right",
+                      selection: "none",
+                      onTrigger: () => context.ui.dialog.clear(),
+                    },
+                  ],
+                })
+                context.ui.dialog.set({ size: "xlarge", centered: true })
+                const picked = await selection
+                if (!picked) return
+                const message: any = rows.find((m: any) => m.id === picked)
+                if (!message) return
+                const duration = dur(message.time?.created, message.time?.completed)
+                const tok = message.tokens ?? {}
+                const cache = tok.cache ?? {}
+                const cost = typeof message.cost === "number" ? message.cost : 0
+                const finish = message.finish ?? message.rawFinish ?? "—"
+                // promise-based dialog: Escape is documented to resolve it
+                const details = context.ui.dialog.alert({
+                  title: "Turn details",
+                  message: [
+                    `started:   ${fmt(message.time?.created)}`,
+                    `completed: ${message.time?.completed ? fmt(message.time.completed) : "in progress"}`,
+                    `duration:  ${duration ?? "—"}`,
+                    `agent:     ${message.agent ?? "—"}`,
+                    `model:     ${message.model?.id ?? message.model ?? "—"}${message.model?.variant ? ` (${message.model.variant})` : ""}`,
+                    `tokens:    in ${tok.input ?? 0} · out ${tok.output ?? 0} · reasoning ${tok.reasoning ?? 0} · cache read ${cache.read ?? 0}`,
+                    `cost:      ${cost ? `$${cost.toFixed(4)}` : "$0"}`,
+                    `finish:    ${String(finish)}`,
+                    ``,
+                    preview(message) || "no text reply",
+                  ].join("\n"),
+                })
+                context.ui.dialog.set({ size: "xlarge", centered: true })
+                await details
+              }
+    }
+
+    // Keymap provider exists only in a full TUI; CLI reconciliation must not fail.
+    let disposeKeys: (() => void) | undefined
+    try {
+      disposeKeys = context.keymap.layer(() => ({
+        mode: "global",
+        commands: [
+          {
+            id: "session-time.timeline",
+            title: "Time: session timeline",
+            slash: { name: "time" },
+            run: () => { void openTimeline() },
+          },
+        ],
+      }))
+    } catch {
+      // no Keymap.Provider outside the TUI — the command is simply not registered
+    }
+
+    return () => {
+      clearInterval(timer)
+      unlisten()
+      disposeClock?.()
+      disposeSide?.()
+      disposeKeys?.()
+    }
+  },
+})
