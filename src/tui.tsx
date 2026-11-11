@@ -573,6 +573,7 @@ export default Plugin.define({
           thoughtLabel: `${thoughtCount > 1 ? ` thought ×${thoughtCount}` : " thought"}${thoughtDuration ? ` · ${thoughtDuration}` : ""}`,
           reply: fmt(replyTime),
           replyLabel: ` reply${replyDuration ? ` · ${replyDuration}` : ""}`,
+          showTools: tools.total > 0,
           tools: String(tools.total),
           toolsLabel: ` tools${tools.mcp ? ` · ${tools.mcp} mcp` : ""}${toolTop ? `  ${toolTop}` : ""}`,
         }
@@ -588,7 +589,7 @@ export default Plugin.define({
           <box flexDirection="row"><text fg={context.theme.text.base} content={model().input} /><text fg={context.theme.text.muted} content={model().inputLabel} /></box>
           <box flexDirection="row"><text fg={context.theme.text.base} content={model().thought} /><text fg={context.theme.text.muted} content={model().thoughtLabel} /></box>
           <box flexDirection="row"><text fg={context.theme.text.base} content={model().reply} /><text fg={context.theme.text.muted} content={model().replyLabel} /></box>
-          <box flexDirection="row"><text fg={context.theme.text.base} content={model().tools} /><text fg={context.theme.text.muted} content={model().toolsLabel} /></box>
+          {model().showTools && <box flexDirection="row"><text fg={context.theme.text.base} content={model().tools} /><text fg={context.theme.text.muted} content={model().toolsLabel} /></box>}
         </box>
       )
     }
