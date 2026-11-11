@@ -599,7 +599,7 @@ export default Plugin.define({
 
           <Show when={view.open}>
             <text>
-              <span style={{ fg: theme.text.muted }}>● </span>
+              <span style={{ fg: theme.text.muted }}>• </span>
               <span style={{ fg: theme.text.base }}>{model().started}</span>
               <span style={{ fg: theme.text.muted }}>  started</span>
             </text>
@@ -607,34 +607,36 @@ export default Plugin.define({
               <span style={{ fg: theme.text.muted }}>  {model().counters}</span>
             </text>
             <text> </text>
-            <box flexDirection="row" onMouseUp={() => void openTimeline()}>
+            <box flexDirection="column" paddingLeft={2}>
+              <box flexDirection="row" onMouseUp={() => void openTimeline()}>
+                <text>
+                  <b>Last answer</b>
+                  <span style={{ fg: theme.text.muted }}>  ⏱</span>
+                </text>
+              </box>
               <text>
-                <b>Last answer</b>
-                <span style={{ fg: theme.text.muted }}>  ⏱</span>
+                <span style={{ fg: theme.text.muted }}>• </span>
+                <span style={{ fg: theme.text.base }}>{model().input}</span>
+                <span style={{ fg: theme.text.muted }}>{model().inputLabel}</span>
               </text>
+              <text>
+                <span style={{ fg: theme.text.muted }}>• </span>
+                <span style={{ fg: theme.text.base }}>{model().thought}</span>
+                <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
+              </text>
+              <text>
+                <span style={{ fg: theme.text.muted }}>• </span>
+                <span style={{ fg: theme.text.base }}>{model().reply}</span>
+                <span style={{ fg: theme.text.muted }}>{model().replyLabel}</span>
+              </text>
+              <Show when={model().showTools}>
+                <text>
+                  <span style={{ fg: theme.text.muted }}>• </span>
+                  <span style={{ fg: theme.text.base }}>{model().tools}</span>
+                  <span style={{ fg: theme.text.muted }}>{model().toolsLabel}</span>
+                </text>
+              </Show>
             </box>
-            <text>
-              <span style={{ fg: theme.text.base }}>● </span>
-              <span style={{ fg: theme.text.base }}>{model().input}</span>
-              <span style={{ fg: theme.text.muted }}>{model().inputLabel}</span>
-            </text>
-            <text>
-              <span style={{ fg: theme.text.feedback.warning.base }}>● </span>
-              <span style={{ fg: theme.text.base }}>{model().thought}</span>
-              <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
-            </text>
-            <text>
-              <span style={{ fg: theme.text.feedback.success.base }}>● </span>
-              <span style={{ fg: theme.text.base }}>{model().reply}</span>
-              <span style={{ fg: theme.text.muted }}>{model().replyLabel}</span>
-            </text>
-            <Show when={model().showTools}>
-              <text>
-                <span style={{ fg: theme.text.muted }}>● </span>
-                <span style={{ fg: theme.text.base }}>{model().tools}</span>
-                <span style={{ fg: theme.text.muted }}>{model().toolsLabel}</span>
-              </text>
-            </Show>
           </Show>
         </box>
       )
