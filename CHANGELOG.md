@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-11-11
+
+- Redesigned sidebar: **Session** block (start time + request/step counters) and **Last answer**
+  block (input, thought ×N + total, reply + duration, tool/MCP counts with per-tool breakdown).
+- Two-tone rendering (values base, labels muted) via StyledText tags.
+- Session counters computed once via full pagination, then refreshed from the message window.
+
 ## 0.3.4 — 2026-11-11
 
 - Fix: aggregated thought duration was never shown — `dur(0, totalMs)` hit the
