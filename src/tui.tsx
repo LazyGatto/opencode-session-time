@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { Plugin } from "@opencode/plugin/tui"
 import { createMemo, createSignal, onMount } from "solid-js"
-import { TextAttributes, t, fg, bold } from "@opentui/core"
+import { TextAttributes } from "@opentui/core"
 
 // opencode-session-time: timestamps for your OpenCode sessions.
 //
@@ -558,10 +558,6 @@ export default Plugin.define({
             ? dur(reply?.time?.created, reply?.time?.completed)
             : anchor.replyDuration
 
-        const B = context.theme.text.base
-        const M = context.theme.text.muted
-        const row = (time: number | undefined, label: string, extra?: string) =>
-          t`${fg(B)(fmt(time))}  ${fg(M)(label)}${extra ? fg(M)(` · ${extra}`) : ""}`
         const toolTop = Object.entries(counts.tools)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 3)
@@ -569,28 +565,30 @@ export default Plugin.define({
           .join(" · ")
 
         return {
-          started: session?.time?.created,
+          started: fmt(session?.time?.created),
           counters: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
-          input: row(inputTime, "input"),
-          thought: row(thoughtTime, thoughtCount > 1 ? `thought ×${thoughtCount}` : "thought", thoughtDuration),
-          reply: row(replyTime, "reply", replyDuration),
-          tools: tools.mcp
-            ? t`${fg(B)(String(tools.total))} ${fg(M)("tools")} · ${fg(B)(String(tools.mcp))} ${fg(M)("mcp")}${toolTop ? fg(M)(`  ${toolTop}`) : ""}`
-            : t`${fg(B)(String(tools.total))} ${fg(M)("tools")}${toolTop ? fg(M)(`  ${toolTop}`) : ""}`,
+          input: fmt(inputTime),
+          inputLabel: " input",
+          thought: fmt(thoughtTime),
+          thoughtLabel: `${thoughtCount > 1 ? ` thought ×${thoughtCount}` : " thought"}${thoughtDuration ? ` · ${thoughtDuration}` : ""}`,
+          reply: fmt(replyTime),
+          replyLabel: ` reply${replyDuration ? ` · ${replyDuration}` : ""}`,
+          tools: String(tools.total),
+          toolsLabel: ` tools${tools.mcp ? ` · ${tools.mcp} mcp` : ""}${toolTop ? `  ${toolTop}` : ""}`,
         }
       })
 
       return (
         <box flexDirection="column">
-          <text>{t`${bold("Session")}`}</text>
-          <text>{t`${fg(context.theme.text.base)(fmt(model().started))}  ${fg(context.theme.text.muted)("started")}`}</text>
-          <text>{t`${fg(context.theme.text.muted)(model().counters)}`}</text>
-          <text> </text>
-          <text>{t`${bold("Last answer")}`}</text>
-          <text>{model().input}</text>
-          <text>{model().thought}</text>
-          <text>{model().reply}</text>
-          <text>{model().tools}</text>
+          <text fg={context.theme.text.base} attributes={TextAttributes.BOLD} content="Session" />
+          <box flexDirection="row"><text fg={context.theme.text.base} content={model().started} /><text fg={context.theme.text.muted} content=" started" /></box>
+          <text fg={context.theme.text.muted} content={model().counters} />
+          <text content=" " />
+          <text fg={context.theme.text.base} attributes={TextAttributes.BOLD} content="Last answer" />
+          <box flexDirection="row"><text fg={context.theme.text.base} content={model().input} /><text fg={context.theme.text.muted} content={model().inputLabel} /></box>
+          <box flexDirection="row"><text fg={context.theme.text.base} content={model().thought} /><text fg={context.theme.text.muted} content={model().thoughtLabel} /></box>
+          <box flexDirection="row"><text fg={context.theme.text.base} content={model().reply} /><text fg={context.theme.text.muted} content={model().replyLabel} /></box>
+          <box flexDirection="row"><text fg={context.theme.text.base} content={model().tools} /><text fg={context.theme.text.muted} content={model().toolsLabel} /></box>
         </box>
       )
     }
