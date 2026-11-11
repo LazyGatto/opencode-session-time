@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 — 2026-11-11
+
+- Sidebar `Session Timings` again shows plain timestamps/durations refreshed on data events.
+  The ticking `x ago` ages are removed: the TUI repaints on activity, not every second
+  while idle, so live ages froze and misled.
+
 ## 0.3.1 — 2026-11-11
 
 - Clicking the prompt-footer timer opens the `/time` timeline popup (the popup itself is mouse-friendly: click, scroll).

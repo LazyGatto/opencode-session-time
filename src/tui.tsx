@@ -45,25 +45,9 @@ const dur = (start?: number, end?: number) => {
   return `${Math.floor(hours / 24)}d${pad(hours % 24)}h`
 }
 
-const ago = (ms?: number) => {
-  if (!ms) return ""
-  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000))
-  if (seconds < 5) return "just now"
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  if (days < 30) return `${Math.floor(days / 7)}w ago`
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`
-  return `${Math.floor(days / 365)}y ago`
-}
-
 const line = (ms: number | undefined, label: string, duration?: string) => {
   if (!ms) return `— ${label}`
-  return `${fmt(ms)} ${label}${duration ? ` · ${duration}` : ""} · ${ago(ms)}`
+  return `${fmt(ms)} ${label}${duration ? ` · ${duration}` : ""}`
 }
 
 const preview = (message: any): string => {
@@ -451,7 +435,6 @@ export default Plugin.define({
       onMount(() => ensureAnchors(props.sessionID))
 
       const values = createMemo((): TimingValues => {
-        tick()
         const list = messages(context, props.sessionID)
         const session = context.data.session.get(props.sessionID)
         const anchor = anchors[props.sessionID] ?? {}
