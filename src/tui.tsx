@@ -153,17 +153,6 @@ const lastUser = (list: any[]) => {
   }
 }
 
-const lastThought = (list: any[]) => {
-  for (let i = list.length - 1; i >= 0; i--) {
-    const message = list[i]
-    if (message.type !== "assistant" || !Array.isArray(message.content)) continue
-    for (let j = message.content.length - 1; j >= 0; j--) {
-      const part = message.content[j]
-      if (part.type === "reasoning" && part.time?.created) return part
-    }
-  }
-}
-
 const thoughtStats = (list: any[]) => {
   // reasoning phases since the last user input (all assistant steps of the turn)
   let userIdx = -1
@@ -292,7 +281,7 @@ export default Plugin.define({
     const runBackfill = async (sessionID: string) => {
       const list = messages(context, sessionID)
       const cachedUser = lastUser(list)
-      const cachedThought = lastThought(list)
+      const cachedThought = thoughtStats(list).last
       const cachedReply = lastReply(list)
       rememberFromList(sessionID)
 
