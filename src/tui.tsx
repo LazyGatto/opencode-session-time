@@ -345,7 +345,6 @@ export default Plugin.define({
         patch.reply = reply.time.completed
         patch.replyDuration = dur(reply.time?.created, reply.time?.completed)
       }
-      patch.counts = windowCounts(list)
       const updated = context.data.session.get(sessionID)?.time?.updated
       if (updated) patch.updated = updated
       remember(sessionID, patch)
@@ -444,7 +443,8 @@ export default Plugin.define({
       if (state?.done && sessionUpdated <= anchorUpdated) return
       if (state && now - state.at < 10_000) return
       backfillState.set(sessionID, { at: now, done: false })
-      if (!anchors[sessionID]?.counts || anchors[sessionID]?.counts?.capped) {
+      const existingCounts = anchors[sessionID]?.counts
+      if (!existingCounts || existingCounts.capped || now - (existingCounts.at ?? 0) > 60_000) {
         void fullCounts(sessionID).then((c) => remember(sessionID, { counts: c })).catch(() => {})
       }
       void runBackfill(sessionID)
@@ -558,7 +558,7 @@ export default Plugin.define({
             ? dur(reply?.time?.created, reply?.time?.completed)
             : anchor.replyDuration
 
-        const toolTop = Object.entries(counts.tools)
+        const toolTop = Object.entries(tools.counts)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 3)
           .map(([n, c]) => `${n} ${c}`)
