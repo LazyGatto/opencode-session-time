@@ -571,19 +571,19 @@ export default Plugin.define({
           .join(" · ")
 
         return {
-          started: fmt(session?.time?.created),
-          counters: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
+          summary: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
+          startedTime: fmt(session?.time?.created),
           requests: String(counts.user),
           steps: `${counts.steps}${counts.capped ? "+" : ""}`,
-          input: fmt(inputTime),
-          inputLabel: "  input",
-          thought: fmt(thoughtTime),
-          thoughtLabel: `  ${thoughtCount > 1 ? `thought ×${thoughtCount}` : "thought"}${thoughtDuration ? ` · ${thoughtDuration}` : ""}`,
-          reply: fmt(replyTime),
-          replyLabel: `  reply${replyDuration ? ` · ${replyDuration}` : ""}`,
+          inputTime: fmt(inputTime),
+          thoughtLabel: `Thought${thoughtCount > 1 ? ` ×${thoughtCount}` : ""}`,
+          thoughtInfo: thoughtDuration ? ` · ${thoughtDuration}` : "",
+          thoughtTime: fmt(thoughtTime),
+          replyInfo: replyDuration ? ` · ${replyDuration}` : "",
+          replyTime: fmt(replyTime),
           showTools: tools.total > 0,
-          tools: String(tools.total),
-          toolsLabel: `  tools${tools.mcp ? ` · ${tools.mcp} mcp` : ""}${toolTop ? `  ${toolTop}` : ""}`,
+          toolsTotal: String(tools.total),
+          toolsInfo: toolTop ? `  ${toolTop}` : "",
         }
       })
 
@@ -594,23 +594,28 @@ export default Plugin.define({
             <text>
               <b>Session</b>
               <Show when={!view.open}>
-                <span style={{ fg: theme.text.muted }}> ({model().counters})</span>
+                <span style={{ fg: theme.text.muted }}> ({model().summary})</span>
               </Show>
             </text>
           </box>
 
           <Show when={view.open}>
-            <text>
-              <span style={{ fg: theme.text.muted }}>• </span>
-              <span style={{ fg: theme.text.base }}>{model().started}</span>
-              <span style={{ fg: theme.text.muted }}>  started</span>
-            </text>
-            <text>
-              <span style={{ fg: theme.text.muted }}>• Requests </span>
-              <span style={{ fg: theme.text.base }}>{model().requests}</span>
-              <span style={{ fg: theme.text.muted }}> · Steps </span>
-              <span style={{ fg: theme.text.base }}>{model().steps}</span>
-            </text>
+            <box flexDirection="row" gap={1} minWidth={0}>
+              <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+              <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><b>Started</b></text>
+              <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().startedTime}</text>
+            </box>
+            <box flexDirection="row" gap={1} minWidth={0}>
+              <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+              <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                <b>Requests</b>
+                <span style={{ fg: theme.text.base }}> {model().requests}</span>
+                <span style={{ fg: theme.text.muted }}> · </span>
+                <b>Steps</b>
+                <span style={{ fg: theme.text.base }}> {model().steps}</span>
+              </text>
+            </box>
+
             <box flexDirection="column" paddingLeft={2}>
               <box flexDirection="row" onMouseUp={() => void openTimeline()}>
                 <text>
@@ -618,27 +623,35 @@ export default Plugin.define({
                   <span style={{ fg: theme.text.muted }}>  ⏱</span>
                 </text>
               </box>
-              <text>
-                <span style={{ fg: theme.text.muted }}>• </span>
-                <span style={{ fg: theme.text.base }}>{model().input}</span>
-                <span style={{ fg: theme.text.muted }}>{model().inputLabel}</span>
-              </text>
-              <text>
-                <span style={{ fg: theme.text.muted }}>• </span>
-                <span style={{ fg: theme.text.base }}>{model().thought}</span>
-                <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
-              </text>
-              <text>
-                <span style={{ fg: theme.text.muted }}>• </span>
-                <span style={{ fg: theme.text.base }}>{model().reply}</span>
-                <span style={{ fg: theme.text.muted }}>{model().replyLabel}</span>
-              </text>
-              <Show when={model().showTools}>
-                <text>
-                  <span style={{ fg: theme.text.muted }}>• </span>
-                  <span style={{ fg: theme.text.base }}>{model().tools}</span>
-                  <span style={{ fg: theme.text.muted }}>{model().toolsLabel}</span>
+              <box flexDirection="row" gap={1} minWidth={0}>
+                <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+                <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><b>User</b></text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().inputTime}</text>
+              </box>
+              <box flexDirection="row" gap={1} minWidth={0}>
+                <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+                <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                  <b>{model().thoughtLabel}</b>
+                  <span style={{ fg: theme.text.muted }}>{model().thoughtInfo}</span>
                 </text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().thoughtTime}</text>
+              </box>
+              <box flexDirection="row" gap={1} minWidth={0}>
+                <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+                <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                  <b>Reply</b>
+                  <span style={{ fg: theme.text.muted }}>{model().replyInfo}</span>
+                </text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().replyTime}</text>
+              </box>
+              <Show when={model().showTools}>
+                <box flexDirection="row" gap={1} minWidth={0}>
+                  <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
+                  <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
+                    <b>Tools {model().toolsTotal}</b>
+                    <span style={{ fg: theme.text.muted }}>{model().toolsInfo}</span>
+                  </text>
+                </box>
               </Show>
             </box>
           </Show>
