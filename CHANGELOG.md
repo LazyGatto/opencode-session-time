@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4 — 2026-11-11
+
+- Fix: aggregated thought duration was never shown — `dur(0, totalMs)` hit the
+  `!start` guard and returned undefined. Added `durMs()` for precomputed durations.
+
 ## 0.3.3 — 2026-11-11
 
 - `thought` row now aggregates all reasoning phases since the last user input:

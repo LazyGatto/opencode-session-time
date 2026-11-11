@@ -45,6 +45,17 @@ const dur = (start?: number, end?: number) => {
   return `${Math.floor(hours / 24)}d${pad(hours % 24)}h`
 }
 
+const durMs = (ms: number) => {
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
+  const minutes = Math.floor(ms / 60_000)
+  const seconds = Math.floor((ms % 60_000) / 1000)
+  if (minutes < 60) return `${minutes}m${pad(seconds)}s`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h${pad(minutes % 60)}m`
+  return `${Math.floor(hours / 24)}d${pad(hours % 24)}h`
+}
+
 const line = (ms: number | undefined, label: string, duration?: string) => {
   if (!ms) return `— ${label}`
   return `${fmt(ms)} ${label}${duration ? ` · ${duration}` : ""}`
@@ -264,7 +275,7 @@ export default Plugin.define({
       if (user?.time?.created) patch.user = user.time.created
       if (thought.last?.time?.created) {
         patch.thought = thought.last.time.created
-        patch.thoughtDuration = dur(0, thought.totalMs)
+        patch.thoughtDuration = durMs(thought.totalMs)
         patch.thoughtCount = thought.count
       }
       if (reply?.time?.completed) {
@@ -347,7 +358,7 @@ export default Plugin.define({
               )
               remember(sessionID, {
                 thought: last.time.created,
-                thoughtDuration: dur(0, totalMs),
+                thoughtDuration: durMs(totalMs),
                 thoughtCount: phases.length,
                 updated: context.data.session.get(sessionID)?.time?.updated,
               })
@@ -471,7 +482,7 @@ export default Plugin.define({
         const replyTime = Math.max(cachedReply, anchor.reply ?? 0) || undefined
         const thoughtDuration =
           cachedThought >= (anchor.thought ?? 0)
-            ? dur(0, thought.totalMs)
+            ? durMs(thought.totalMs)
             : anchor.thoughtDuration
         const thoughtCount =
           cachedThought >= (anchor.thought ?? 0) ? thought.count : (anchor.thoughtCount ?? 1)
