@@ -602,16 +602,16 @@ export default Plugin.define({
           <Show when={view.open}>
             <box flexDirection="row" gap={1} minWidth={0}>
               <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
-              <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><b>Started</b></text>
+              <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><span style={{ fg: theme.text.muted }}>Started</span></text>
               <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().startedTime}</text>
             </box>
             <box flexDirection="row" gap={1} minWidth={0}>
               <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
               <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                <b>Requests</b>
+                <span style={{ fg: theme.text.muted }}>Requests</span>
                 <span style={{ fg: theme.text.base }}> {model().requests}</span>
                 <span style={{ fg: theme.text.muted }}> · </span>
-                <b>Steps</b>
+                <span style={{ fg: theme.text.muted }}>Steps</span>
                 <span style={{ fg: theme.text.base }}> {model().steps}</span>
               </text>
             </box>
@@ -625,13 +625,13 @@ export default Plugin.define({
               </box>
               <box flexDirection="row" gap={1} minWidth={0}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
-                <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><b>User</b></text>
+                <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><span style={{ fg: theme.text.muted }}>User</span></text>
                 <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().inputTime}</text>
               </box>
               <box flexDirection="row" gap={1} minWidth={0}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                 <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                  <b>{model().thoughtLabel}</b>
+                  <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
                   <span style={{ fg: theme.text.muted }}>{model().thoughtInfo}</span>
                 </text>
                 <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().thoughtTime}</text>
@@ -639,7 +639,7 @@ export default Plugin.define({
               <box flexDirection="row" gap={1} minWidth={0}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                 <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                  <b>Reply</b>
+                  <span style={{ fg: theme.text.muted }}>Reply</span>
                   <span style={{ fg: theme.text.muted }}>{model().replyInfo}</span>
                 </text>
                 <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().replyTime}</text>
@@ -648,7 +648,7 @@ export default Plugin.define({
                 <box flexDirection="row" gap={1} minWidth={0}>
                   <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                   <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
-                    <b>Tools {model().toolsTotal}</b>
+                    <span style={{ fg: theme.text.muted }}>Tools {model().toolsTotal}</span>
                     <span style={{ fg: theme.text.muted }}>{model().toolsInfo}</span>
                   </text>
                 </box>
