@@ -606,7 +606,6 @@ export default Plugin.define({
             <text>
               <span style={{ fg: theme.text.muted }}>  {model().counters}</span>
             </text>
-            <text> </text>
             <box flexDirection="column" paddingLeft={2}>
               <box flexDirection="row" onMouseUp={() => void openTimeline()}>
                 <text>
