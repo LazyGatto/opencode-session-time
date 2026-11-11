@@ -583,7 +583,7 @@ export default Plugin.define({
           replyTime: fmt(replyTime),
           showTools: tools.total > 0,
           toolsTotal: String(tools.total),
-          toolsInfo: toolTop ? `  ${toolTop}` : "",
+          toolsInfo: toolTop ? ` · ${toolTop}` : "",
         }
       })
 
