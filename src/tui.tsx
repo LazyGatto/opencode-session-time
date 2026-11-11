@@ -573,6 +573,8 @@ export default Plugin.define({
         return {
           started: fmt(session?.time?.created),
           counters: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
+          requests: String(counts.user),
+          steps: `${counts.steps}${counts.capped ? "+" : ""}`,
           input: fmt(inputTime),
           inputLabel: "  input",
           thought: fmt(thoughtTime),
@@ -604,7 +606,10 @@ export default Plugin.define({
               <span style={{ fg: theme.text.muted }}>  started</span>
             </text>
             <text>
-              <span style={{ fg: theme.text.muted }}>   {model().counters}</span>
+              <span style={{ fg: theme.text.muted }}>• Requests </span>
+              <span style={{ fg: theme.text.base }}>{model().requests}</span>
+              <span style={{ fg: theme.text.muted }}> · Steps </span>
+              <span style={{ fg: theme.text.base }}>{model().steps}</span>
             </text>
             <box flexDirection="column" paddingLeft={2}>
               <box flexDirection="row" onMouseUp={() => void openTimeline()}>
