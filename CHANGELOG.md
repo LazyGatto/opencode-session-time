@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-11-11
 
-- Reset the prompt-footer stopwatch to `00:00` when a new user message is waiting
-  for its first assistant step, instead of continuing the previous turn's value.
+- Clicking the prompt-footer timer opens the `/time` timeline popup (the popup itself is mouse-friendly: click, scroll).
+- Reset the prompt-footer stopwatch to `00:00` when a new user message is waiting for its first
+  assistant step, instead of continuing the previous turn's value. (contributed by [@ransagy](https://github.com/ransagy))
+- Package metadata points back at the upstream repository. (contributed by [@ransagy](https://github.com/ransagy))
 
 ## 0.3.0 — 2026-11-08
 

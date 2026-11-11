@@ -442,7 +442,8 @@ export default Plugin.define({
         return stopwatch((running ? Date.now() : turn.last) - turn.start)
       })
 
-      return <text fg={context.theme.text.muted} content={`⏱ ${elapsed()}`} />
+      return <text fg={context.theme.text.muted} content={`⏱ ${elapsed()}`}
+        onMouseUp={(e: any) => { e?.stopPropagation?.(); void openTimeline() }} />
     }
 
     // 2) "Session Timings" block in the sidebar (styled like the built-in Context/MCP blocks).
@@ -519,17 +520,8 @@ export default Plugin.define({
       render: ({ sessionID }) => <SessionTimings sessionID={sessionID} />,
     })
 
-    // Keymap provider exists only in a full TUI; CLI reconciliation must not fail.
-    let disposeKeys: (() => void) | undefined
-    try {
-      disposeKeys = context.keymap.layer(() => ({
-        mode: "global",
-        commands: [
-          {
-            id: "session-time.timeline",
-            title: "Time: session timeline",
-            slash: { name: "time" },
-            run: async () => {
+    // Opens the /time timeline popup — shared by the /time command and the footer click.
+    const openTimeline = async () => {
               // palette-style popup: searchable, navigable, Esc closes
               const route = context.ui.router.current()
               const sessionID = route.type === "session" ? (route.sessionID as string) : undefined
@@ -599,7 +591,19 @@ export default Plugin.define({
                 context.ui.dialog.set({ size: "xlarge", centered: true })
                 await details
               }
-            },
+    }
+
+    // Keymap provider exists only in a full TUI; CLI reconciliation must not fail.
+    let disposeKeys: (() => void) | undefined
+    try {
+      disposeKeys = context.keymap.layer(() => ({
+        mode: "global",
+        commands: [
+          {
+            id: "session-time.timeline",
+            title: "Time: session timeline",
+            slash: { name: "time" },
+            run: () => { void openTimeline() },
           },
         ],
       }))
