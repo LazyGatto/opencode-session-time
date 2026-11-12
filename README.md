@@ -8,7 +8,8 @@
 > copies of `@opentui/solid` break the reactivity graph — the first frame renders, then
 > nothing updates.
 >
-> **Recommended install: git clone + absolute path in `cli.json`** (see [Install](#install) below).
+> **Install: `opencode plugin add github:…` (or the clone + absolute-path fallback).**
+> See [Install](#install) below.
 
 [![npm version](https://img.shields.io/npm/v/opencode-session-time)](https://www.npmjs.com/package/opencode-session-time)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -71,20 +72,30 @@ is the closest native place.
 
 ## Install
 
-TUI-only plugin. The npm package is currently broken (see the warning at the top), and
-`opencode plugin add github:…` can also fail on some CLI versions (see the alternative
-below). The reliable install is a local clone referenced by absolute path.
+TUI-only plugin. The npm package is currently broken (see the warning at the top), so
+install from GitHub instead. Two equivalent ways to do that:
 
-### Primary (reliable): git clone + absolute path
+### 1. `opencode plugin add github:…` (works on current CLI versions)
 
-Clone the repository to a convenient location, for example:
+```bash
+opencode plugin add github:LazyGatto/opencode-session-time
+# or a pinned tag:
+opencode plugin add github:LazyGatto/opencode-session-time#v0.4.0
+```
+
+`opencode plugin add` writes the plugin to your global CLI configuration and installs it.
+Restart the TUI after installing.
+
+### 2. Fallback: git clone + absolute path (version-independent)
+
+On some CLI versions the git-dep install step above can fail with
+`NpmInstallFailedError: … git dep preparation failed`. If that happens, clone the
+repository and reference it by absolute path:
 
 ```bash
 git clone https://github.com/LazyGatto/opencode-session-time.git \
   ~/opencode-plugins/opencode-session-time
 ```
-
-Then list the clone's absolute path in `~/.config/opencode/cli.json`:
 
 ```jsonc
 // ~/.config/opencode/cli.json
@@ -95,20 +106,8 @@ Then list the clone's absolute path in `~/.config/opencode/cli.json`:
 
 Restart the TUI after installing.
 
-### Alternative: `opencode plugin add github:…` (depends on CLI version)
-
-```bash
-opencode plugin add github:LazyGatto/opencode-session-time
-# or a pinned tag:
-opencode plugin add github:LazyGatto/opencode-session-time#v0.4.0
-```
-
-`opencode plugin add` writes the plugin to your global CLI configuration and installs it.
-Note: installing a git dep this way may fail on some CLI versions with
-`NpmInstallFailedError: … git dep preparation failed` (upstream bug); if that happens,
-fall back to the clone + absolute path above. Listing `"github:…"` directly in
-`cli.json` triggers the same git-dep install and can fail the same way, so it is not
-recommended as the primary method either.
+Note: listing `"github:…"` directly in `cli.json` triggers the same git-dep install as
+`plugin add`, so if that step fails on your CLI version, prefer the absolute path.
 
 Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
 dependencies provided by the host. This is a terminal-client plugin; web and desktop
