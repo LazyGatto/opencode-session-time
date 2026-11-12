@@ -1,15 +1,25 @@
 # opencode-session-time
 
+> ⚠️ **npm install is broken**: interactive updates (collapse/click/live refresh) don't
+> work when installed from npm due to an upstream OpenCode bug
+> [anomalyco/opencode#39986](https://github.com/anomalyco/opencode/issues/39986)
+> ("tui: support reactive external TSX plugins in packaged CLI", open): the packaged CLI
+> skips the host TSX transform for plugins loaded from the npm cache, so the plugin's own
+> copies of `@opentui/solid` break the reactivity graph — the first frame renders, then
+> nothing updates.
+>
+> **Recommended install: from GitHub** (see [Install](#install) below).
+
 [![npm version](https://img.shields.io/npm/v/opencode-session-time)](https://www.npmjs.com/package/opencode-session-time)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Timestamps for your [OpenCode](https://opencode.ai) V2 sessions: a current-turn
-stopwatch in the prompt footer, a `Session Timings` block in the sidebar, and a
+stopwatch in the prompt footer, a `Session`/`Last answer` sidebar block, and a
 `/time` timeline popup.
 
 > **v0.2.0–v0.2.1 contributed by [@ransagy](https://github.com/ransagy)** — last user
-> input, last model thought and last model reply timings, relative ages, turn stopwatch,
-> API backfill, durable persistence and throttled live refresh.
+> input, last model thought and last model reply timings, turn stopwatch, API backfill,
+> durable persistence and throttled live refresh.
 
 Small TUI plugin built on the official [`@opencode/plugin/tui`](https://opencode.ai/v2/docs/build/plugins/cli/) API.
 
@@ -18,12 +28,13 @@ Small TUI plugin built on the official [`@opencode/plugin/tui`](https://opencode
 | Where | What |
 | --- | --- |
 | Prompt footer (`prompt.footer.status`) | current-turn elapsed time, `⏱ MM:SS` (or `⏱ H:MM:SS`). Starts when the first assistant step begins after the last user input and freezes when the turn completes. If that step is outside the loaded message window, it falls back to the last user input time. |
-| Sidebar (`sidebar.content`) | `Session Timings` block styled like the built-in `Context`/`MCP` blocks: session start, last user input, model thought phases (count ×N and total duration), and last model reply. Each row shows a timestamp and the relevant duration; rows refresh on data events. Historical values are backfilled from the API when they are outside the loaded window. Rows are sorted oldest to newest; rows without a timestamp stay at the bottom. |
+| Sidebar (`sidebar.content`) | `Session` block styled like the built-in `Context`/`MCP` blocks (session start, request/step counters), plus a `Last answer` section: last user input, model thought phases (count ×N and total duration), last model reply, and top tool counts. Rows are laid out in a fixed order with the timestamp/payload right-aligned; they refresh on data events. Historical values are backfilled from the API when they are outside the loaded window. |
 | `/time` command (palette popup) | assistant turn timeline as a searchable popup, newest first: time, agent, model, duration, reply preview. **Enter** opens a per-turn details card (timing, tokens, cost, finish reason); **Esc** returns to the list, **Esc** again closes. |
 
-The sidebar block updates live on data events, and relative ages refresh every second.
-The prompt-footer timer is a turn stopwatch, not a wall clock; it shows `00:00` while
-waiting for the first assistant step and `—` when there is no turn.
+The sidebar block updates on data events: timestamps and durations re-render whenever
+the data behind them changes. There is no per-second "x ago" countdown — timestamps are
+absolute times. The prompt-footer timer is a turn stopwatch, not a wall clock; it shows
+`00:00` while waiting for the first assistant step and `—` when there is no turn.
 
 Per-session anchors are persisted in durable storage, so a TUI restart restores the
 last input, thought, and reply immediately; the API backfill covers new sessions and
@@ -32,11 +43,14 @@ other devices.
 Example:
 
 ```text
-Session Timings
-16:27:31 started · 1d ago
-17:43:12 input · 3m ago
-17:43:20 thought · 2.1s · 3m ago
-17:44:02 reply · 8.4s · 2m ago
+▼ Session
+• Started              16:27:31
+• Requests 12 · Steps 48
+  Last answer  ⏱
+  • User                17:43:12
+  • Thought ×2 · 2.1s   17:43:20
+  • Reply · 8.4s        17:44:02
+  • Tools 5 · shell 3 · read 2
 ```
 
 Same-day timestamps omit the date. Older timestamps include it (`23.10, 16:27:31`).
@@ -57,26 +71,44 @@ is the closest native place.
 
 ## Install
 
-TUI-only plugin. Install it from npm:
+TUI-only plugin. **Install from GitHub** — the npm package is currently broken (see the
+warning at the top):
 
 ```bash
-opencode plugin add opencode-session-time
+opencode plugin add github:LazyGatto/opencode-session-time
+```
+
+To pin a released tag:
+
+```bash
+opencode plugin add github:LazyGatto/opencode-session-time#v0.4.0
 ```
 
 `opencode plugin add` writes the plugin to your global CLI configuration and installs it.
-Restart the TUI after installing. Alternatively, list the package in
-`~/.config/opencode/cli.json`:
+Restart the TUI after installing.
+
+Alternatively, list the plugin in `~/.config/opencode/cli.json` — the same `github:`
+forms work there, with or without a pinned tag:
 
 ```jsonc
 {
-  "plugins": ["opencode-session-time"]
+  "plugins": ["github:LazyGatto/opencode-session-time"]
 }
 ```
 
-To pin a release tag or track the development branch directly from GitHub:
+```jsonc
+{
+  "plugins": ["github:LazyGatto/opencode-session-time#v0.4.0"]
+}
+```
 
-```bash
-opencode plugin add github:LazyGatto/opencode-session-time#v0.2.1
+For local development, point `plugins` at a clone of the repository instead of the
+`github:` shorthand:
+
+```jsonc
+{
+  "plugins": ["/path/to/opencode-session-time"]
+}
 ```
 
 Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
