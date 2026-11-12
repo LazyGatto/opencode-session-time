@@ -1,15 +1,14 @@
 # opencode-session-time
 
-> ⚠️ **npm install is broken**: interactive updates (collapse/click/live refresh) don't
-> work when installed from npm due to an upstream OpenCode bug
+> ⚠️ **Interactive updates (collapse/click/live refresh) are frozen on cached installs**
+> — both `npm` and `github:` sources — due to upstream OpenCode bug
 > [anomalyco/opencode#39986](https://github.com/anomalyco/opencode/issues/39986)
 > ("tui: support reactive external TSX plugins in packaged CLI", open): the packaged CLI
-> skips the host TSX transform for plugins loaded from the npm cache, so the plugin's own
-> copies of `@opentui/solid` break the reactivity graph — the first frame renders, then
-> nothing updates.
->
-> **Install: `opencode plugin add github:…` (or the clone + absolute-path fallback).**
-> See [Install](#install) below.
+> skips the host TSX transform for plugins loaded from a cache (npm or git), so the
+> plugin's own copies of `@opentui/solid` disconnect the reactivity graph — the first
+> frame renders, then nothing updates (collapse, clicks, timers).
+> **The working install is a local clone referenced by an absolute path** (the host
+> transform applies). See [Install](#install) below.
 
 [![npm version](https://img.shields.io/npm/v/opencode-session-time)](https://www.npmjs.com/package/opencode-session-time)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -72,25 +71,13 @@ is the closest native place.
 
 ## Install
 
-TUI-only plugin. The npm package is currently broken (see the warning at the top), so
-install from GitHub instead. Two equivalent ways to do that:
+TUI-only reactive plugin. **Cached installs (`npm`, `github:…`) freeze interactive
+updates** (see the warning above, [anomalyco/opencode#39986](https://github.com/anomalyco/opencode/issues/39986)):
+they load and render, but collapse/click/live refresh don't work. **The working install
+is a local clone referenced by an absolute path.** Switch to npm/`github:` once the
+upstream fix lands.
 
-### 1. `opencode plugin add github:…` (works on current CLI versions)
-
-```bash
-opencode plugin add github:LazyGatto/opencode-session-time
-# or a pinned tag:
-opencode plugin add github:LazyGatto/opencode-session-time#v0.4.0
-```
-
-`opencode plugin add` writes the plugin to your global CLI configuration and installs it.
-Restart the TUI after installing.
-
-### 2. Fallback: git clone + absolute path (version-independent)
-
-On some CLI versions the git-dep install step above can fail with
-`NpmInstallFailedError: … git dep preparation failed`. If that happens, clone the
-repository and reference it by absolute path:
+### Working: git clone + absolute path
 
 ```bash
 git clone https://github.com/LazyGatto/opencode-session-time.git \
@@ -106,12 +93,16 @@ git clone https://github.com/LazyGatto/opencode-session-time.git \
 
 Restart the TUI after installing.
 
-Note: listing `"github:…"` directly in `cli.json` triggers the same git-dep install as
-`plugin add`, so if that step fails on your CLI version, prefer the absolute path.
+### Not for now: npm / `github:` (load, but reactivity is frozen)
 
-Requirements: OpenCode V2; `@opentui/core`, `@opentui/solid`, `solid-js` are peer
-dependencies provided by the host. This is a terminal-client plugin; web and desktop
-clients do not load TUI plugins.
+```bash
+opencode plugin add opencode-session-time
+# or
+opencode plugin add github:LazyGatto/opencode-session-time
+```
+
+These install and load the plugin, but interactive updates stay frozen until
+[anomalyco/opencode#39986](https://github.com/anomalyco/opencode/issues/39986) is fixed.
 
 ## Notes
 
