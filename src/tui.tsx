@@ -31,6 +31,24 @@ const fmt = (ms?: number) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${time}`
 }
 
+// Relative time for the sidebar toggle. Fine-grained below one hour so it ticks
+// visibly every second: 45s ago · 40m34s ago · 3h12m ago · 5d ago · 2mo ago · 1y ago.
+const ago = (ms?: number) => {
+  if (!ms) return "—"
+  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000))
+  if (s < 5) return "just now"
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m${String(s % 60).padStart(2, "0")}s ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h${String(m % 60).padStart(2, "0")}m ago`
+  const d = Math.floor(h / 24)
+  if (d < 30) return `${d}d ago`
+  const mo = Math.floor(d / 30)
+  if (mo < 12) return `${mo}mo ago`
+  return `${Math.floor(mo / 12)}y ago`
+}
+
 const dur = (start?: number, end?: number) => {
   if (!start || !end || end < start) return undefined
   const ms = end - start
@@ -384,7 +402,7 @@ export default Plugin.define({
       if (!cursor) return
 
       for (let page = 0; page < 10 && (needReply || needThought); page++) {
-        const pageResult = await context.client.message
+        const pageResult: any = await context.client.message
           .list({
             sessionID,
             type: "assistant",
@@ -533,13 +551,18 @@ export default Plugin.define({
     const SessionTimings = (props: { sessionID: string }) => {
       onMount(() => ensureAnchors(props.sessionID))
       const theme = context.theme
-      const [view, updateView] = context.storage.store("view", { initial: { open: true } })
+      const [view, updateView] = context.storage.store("view", { initial: { open: true, relative: false } })
       const toggle = () => {
         void updateView((draft) => {
           draft.open = !draft.open
         }).catch(() => {})
       }
-
+      // Click any timestamp row to flip between absolute clock time and "time ago".
+      const toggleMode = () => {
+        void updateView((draft) => {
+          draft.relative = !draft.relative
+        }).catch(() => {})
+      }
       const model = createMemo(() => {
         const list = messages(context, props.sessionID)
         const session = context.data.session.get(props.sessionID)
@@ -572,18 +595,31 @@ export default Plugin.define({
 
         return {
           summary: `${counts.user} req · ${counts.steps} steps${counts.capped ? "+" : ""}`,
-          startedTime: fmt(session?.time?.created),
+          startedAt: session?.time?.created,
           requests: String(counts.user),
           steps: `${counts.steps}${counts.capped ? "+" : ""}`,
-          inputTime: fmt(inputTime),
+          inputAt: inputTime,
           thoughtLabel: `Thought${thoughtCount > 1 ? ` ×${thoughtCount}` : ""}`,
           thoughtInfo: thoughtDuration ? ` · ${thoughtDuration}` : "",
-          thoughtTime: fmt(thoughtTime),
+          thoughtAt: thoughtTime,
           replyInfo: replyDuration ? ` · ${replyDuration}` : "",
-          replyTime: fmt(replyTime),
+          replyAt: replyTime,
           showTools: tools.total > 0,
           toolsTotal: String(tools.total),
           toolsInfo: toolTop ? ` · ${toolTop}` : "",
+        }
+      })
+
+      // Relative ages must re-render every second: depend on the 1s tick explicitly.
+      const times = createMemo(() => {
+        tick()
+        const m = model()
+        const f = (ms?: number) => (view.relative ? ago(ms) : fmt(ms))
+        return {
+          started: f(m.startedAt),
+          input: f(m.inputAt),
+          thought: f(m.thoughtAt),
+          reply: f(m.replyAt),
         }
       })
 
@@ -600,10 +636,10 @@ export default Plugin.define({
           </box>
 
           <Show when={view.open}>
-            <box flexDirection="row" gap={1} minWidth={0}>
+            <box flexDirection="row" gap={1} minWidth={0} onMouseUp={toggleMode}>
               <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
               <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><span style={{ fg: theme.text.muted }}>Started</span></text>
-              <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().startedTime}</text>
+              <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{times().started}</text>
             </box>
             <box flexDirection="row" gap={1} minWidth={0}>
               <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
@@ -623,26 +659,26 @@ export default Plugin.define({
                   <span style={{ fg: theme.text.muted }}>  ⏱</span>
                 </text>
               </box>
-              <box flexDirection="row" gap={1} minWidth={0}>
+              <box flexDirection="row" gap={1} minWidth={0} onMouseUp={toggleMode}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                 <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}><span style={{ fg: theme.text.muted }}>User</span></text>
-                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().inputTime}</text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{times().input}</text>
               </box>
-              <box flexDirection="row" gap={1} minWidth={0}>
+              <box flexDirection="row" gap={1} minWidth={0} onMouseUp={toggleMode}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                 <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
                   <span style={{ fg: theme.text.muted }}>{model().thoughtLabel}</span>
                   <span style={{ fg: theme.text.muted }}>{model().thoughtInfo}</span>
                 </text>
-                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().thoughtTime}</text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{times().thought}</text>
               </box>
-              <box flexDirection="row" gap={1} minWidth={0}>
+              <box flexDirection="row" gap={1} minWidth={0} onMouseUp={toggleMode}>
                 <text flexShrink={0} style={{ fg: theme.text.muted }}>•</text>
                 <text wrapMode="none" truncate flexGrow={1} flexShrink={1} minWidth={0}>
                   <span style={{ fg: theme.text.muted }}>Reply</span>
                   <span style={{ fg: theme.text.muted }}>{model().replyInfo}</span>
                 </text>
-                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{model().replyTime}</text>
+                <text fg={theme.text.base} wrapMode="none" flexShrink={0}>{times().reply}</text>
               </box>
               <Show when={model().showTools}>
                 <box flexDirection="row" gap={1} minWidth={0}>
@@ -743,9 +779,9 @@ export default Plugin.define({
     }
 
     // Keymap provider exists only in a full TUI; CLI reconciliation must not fail.
-    let disposeKeys: (() => void) | undefined
+    // The layer is removed automatically when the plugin deactivates.
     try {
-      disposeKeys = context.keymap.layer(() => ({
+      context.keymap.layer(() => ({
         mode: "global",
         commands: [
           {
@@ -765,7 +801,6 @@ export default Plugin.define({
       unlisten()
       disposeClock?.()
       disposeSide?.()
-      disposeKeys?.()
     }
   },
 })

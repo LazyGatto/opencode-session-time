@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 — 2026-11-23
+
+- Sidebar timestamps toggle: click any timestamp row (`Started`, `User`, `Thought`, `Reply`)
+  to flip the whole block between absolute clock time and relative ages; click again to
+  switch back. Relative ages are fine-grained below one hour (`45s ago` · `40m34s ago` ·
+  `3h12m ago` · `5d ago` · `2mo ago`) and tick every second — the sidebar values come from a
+  memo that depends on the plugin's 1s tick. The mode persists in durable storage (global for
+  the install, survives TUI restarts).
+- The `/time` popup keeps absolute timestamps (a timeline reads better as clock times).
+
+
 ## 0.4.0 — 2026-11-11
 
 - Redesigned sidebar: **Session** block (start time + request/step counters) and **Last answer**
